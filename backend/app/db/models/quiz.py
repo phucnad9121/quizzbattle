@@ -20,11 +20,11 @@ class Quiz(Base, TimestampMixin):
 
     __table_args__ = (
         Index("idx_quizzes_owner", "owner_id"),
-        Index("idx_quizzes_public", "is_public", postgresql_where=(is_public == True)),
+        Index("idx_quizzes_public", "is_public", postgresql_where=(is_public.is_(True))),
     )
 
     owner: Mapped["User"] = relationship()
-    questions: Mapped[list["Question"]] = relationship(back_populates="quiz", cascade="all, delete-orphan")
+    questions: Mapped[list["Question"]] = relationship(back_populates="quiz", cascade="all, delete-orphan", order_by="Question.order_index")
 
     @property
     def question_count(self) -> int:

@@ -2,8 +2,9 @@ from __future__ import annotations
 import uuid
 from typing import TypeAlias
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.core.security import decode_access_token
 from app.db.models.user import User
@@ -48,3 +49,34 @@ async def get_current_user(
         )
 
     return user
+
+async def get_optional_user(
+    session: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> User | None:
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        return None
+
+    try:
+        token_data = decode_access_token(token)
+    except ValueError:
+        return None
+
+    repo = UserRepository(session)
+    user = await repo.get_by_id(uuid.UUID(token_data.user_id))
+    return user
+
+
+class PaginationParams(BaseModel):
+    page: int
+    size: int
+
+async def paginate(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page")
+) -> PaginationParams:
+    return PaginationParams(page=page, size=size)

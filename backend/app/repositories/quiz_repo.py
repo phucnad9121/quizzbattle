@@ -14,6 +14,17 @@ class QuizRepository(BaseRepository):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_detail(self, quiz_id: uuid.UUID) -> Quiz | None:
+        query = (
+            select(Quiz)
+            .where(Quiz.id == quiz_id)
+            .options(
+                selectinload(Quiz.questions).selectinload(Question.options)
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_owner(self, user_id: uuid.UUID, page: int, size: int) -> Tuple[Sequence[Quiz], int]:
         count_query = select(func.count(Quiz.id)).where(Quiz.owner_id == user_id)
         total_result = await self.session.execute(count_query)

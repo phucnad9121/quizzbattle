@@ -28,7 +28,7 @@ class Question(Base, TimestampMixin):
     )
 
     quiz: Mapped["Quiz"] = relationship(back_populates="questions")
-    options: Mapped[list["AnswerOption"]] = relationship(back_populates="question", cascade="all, delete-orphan")
+    options: Mapped[list["AnswerOption"]] = relationship(back_populates="question", cascade="all, delete-orphan", order_by="AnswerOption.order_index")
 
 
 class AnswerOption(Base):
