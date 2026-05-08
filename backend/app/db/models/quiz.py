@@ -1,5 +1,9 @@
-# app/db/models/quiz.py
 import uuid
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.db.models.user import User
+    from app.db.models.question import Question
+
 from sqlalchemy import String, Boolean, Text, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, TimestampMixin
@@ -21,3 +25,7 @@ class Quiz(Base, TimestampMixin):
 
     owner: Mapped["User"] = relationship()
     questions: Mapped[list["Question"]] = relationship(back_populates="quiz", cascade="all, delete-orphan")
+
+    @property
+    def question_count(self) -> int:
+        return len(self.questions) if self.questions is not None else 0

@@ -1,5 +1,8 @@
-# app/db/models/question.py
 import uuid
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.db.models.quiz import Quiz
+
 from sqlalchemy import String, SmallInteger, Text, Boolean, ForeignKey, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, TimestampMixin

@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import uuid
 from typing import TypeAlias
 
 from fastapi import Depends, Header, HTTPException, status
@@ -40,7 +40,7 @@ async def get_current_user(
         )
 
     repo = UserRepository(session)
-    user = await repo.get_by_id(token_data.user_id)
+    user = await repo.get_by_id(uuid.UUID(token_data.user_id))
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
