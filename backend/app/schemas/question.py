@@ -1,6 +1,52 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 import uuid
-from typing import Optional
+from typing import Optional, Literal
+
+class OptionCreate(BaseModel):
+    option_text: str = Field(..., min_length=1)
+    is_correct: bool = False
+
+class QuestionCreate(BaseModel):
+    question_text: str = Field(..., min_length=1)
+    question_type: Literal["multiple_choice", "true_false"]
+    time_limit_secs: int = Field(30, ge=5, le=120)
+    points: int = Field(100, ge=1)
+    image_url: Optional[str] = None
+    options: list[OptionCreate]
+
+    @model_validator(mode='after')
+    def validate_options(self) -> 'QuestionCreate':
+        correct_count = sum(1 for opt in self.options if opt.is_correct)
+        
+        if self.question_type == "multiple_choice":
+            if not (2 <= len(self.options) <= 4):
+                raise ValueError("multiple_choice must have 2 to 4 options")
+            if correct_count != 1:
+                raise ValueError("multiple_choice must have exactly 1 correct option")
+                
+        elif self.question_type == "true_false":
+            if len(self.options) != 2:
+                raise ValueError("true_false must have exactly 2 options")
+            if correct_count != 1:
+                raise ValueError("true_false must have exactly 1 correct option")
+            
+            # Ensure options are "Đúng" and "Sai" (case-insensitive for validation)
+            texts = {opt.option_text.strip().lower() for opt in self.options}
+            if texts != {"đúng", "sai"}:
+                raise ValueError('true_false options must be "Đúng" and "Sai"')
+                
+        return self
+
+class QuestionUpdate(BaseModel):
+    question_text: Optional[str] = Field(None, min_length=1)
+    question_type: Optional[Literal["multiple_choice", "true_false"]] = None
+    time_limit_secs: Optional[int] = Field(None, ge=5, le=120)
+    points: Optional[int] = Field(None, ge=1)
+    image_url: Optional[str] = None
+    options: Optional[list[OptionCreate]] = None
+
+class ReorderQuestionsRequest(BaseModel):
+    question_ids: list[uuid.UUID]
 
 class OptionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

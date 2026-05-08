@@ -9,13 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "axios": "^1.11.0",
-    "zustand": "^5.0.8",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-toast": "^1.2.14",
+    "@tanstack/react-query": "^5.100.9",
+    "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.541.0",
@@ -24,7 +24,8 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.62.0",
     "tailwind-merge": "^3.3.1",
-    "zod": "^4.1.4"
+    "zod": "^4.1.4",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

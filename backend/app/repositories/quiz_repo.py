@@ -34,6 +34,7 @@ class QuizRepository(BaseRepository):
             select(Quiz)
             .where(Quiz.owner_id == user_id)
             .order_by(Quiz.created_at.desc())
+            .options(selectinload(Quiz.questions))
             .limit(size)
             .offset((page - 1) * size)
         )

@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db, PaginationParams, paginate, get_optional_user
 from app.schemas.quiz import QuizCreate, QuizUpdate, QuizResponse, QuizListResponse, QuizDetailResponse
-from app.repositories.quiz_repo import QuizRepository
+from app.schemas.question import QuestionCreate, QuestionResponse, ReorderQuestionsRequest
+from app.repositories.quiz_repo import QuizRepository, QuestionRepository
 from app.db.models.user import User
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
@@ -101,3 +102,61 @@ async def delete_quiz(
     await repo.delete(id)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/{id}/questions", response_model=QuestionResponse, status_code=status.HTTP_201_CREATED)
+async def create_question(
+    id: uuid.UUID,
+    data: QuestionCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    quiz_repo = QuizRepository(session)
+    quiz = await quiz_repo.get_by_id(id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+        
+    if quiz.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    question_repo = QuestionRepository(session)
+    data_dict = data.model_dump()
+    data_dict["order_index"] = len(quiz.questions)
+    
+    question = await question_repo.create(quiz_id=id, data=data_dict)
+    await session.commit()
+    
+    # Refresh to ensure relationships are loaded (though create already refreshes options)
+    # The response_model needs options, which question_repo.create already eagerly loads.
+    return question
+
+@router.put("/{id}/questions/reorder", response_model=QuizDetailResponse)
+async def reorder_questions(
+    id: uuid.UUID,
+    data: ReorderQuestionsRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    quiz_repo = QuizRepository(session)
+    quiz = await quiz_repo.get_detail(id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+        
+    if quiz.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    existing_ids = {q.id for q in quiz.questions}
+    provided_ids = set(data.question_ids)
+    
+    if existing_ids != provided_ids or len(data.question_ids) != len(existing_ids):
+        raise HTTPException(
+            status_code=422, 
+            detail="question_ids must contain exactly all current question IDs without duplicates"
+        )
+        
+    question_repo = QuestionRepository(session)
+    await question_repo.reorder(id, data.question_ids)
+    await session.commit()
+    
+    # Fetch again to get updated order and relations
+    await session.refresh(quiz, ["questions"])
+    return QuizDetailResponse.model_validate(quiz)
