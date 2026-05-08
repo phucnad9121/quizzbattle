@@ -1,3 +1,21 @@
+export interface OptionResponse {
+  id: string;
+  option_text: string;
+  order_index: int;
+  is_correct?: boolean;
+}
+
+export interface QuestionResponse {
+  id: string;
+  question_text: string;
+  question_type: "multiple_choice" | "true_false";
+  time_limit_secs: number;
+  points: number;
+  order_index: number;
+  image_url: string | null;
+  options: OptionResponse[];
+}
+
 export interface QuizResponse {
   id: string;
   title: string;
@@ -14,4 +32,8 @@ export interface QuizListResponse {
   total: number;
   page: number;
   size: number;
+}
+
+export interface QuizDetailResponse extends QuizResponse {
+  questions: QuestionResponse[];
 }

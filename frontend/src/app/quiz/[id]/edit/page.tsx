@@ -1,11 +1,11 @@
 "use client";
-// Full UI restored after cache clear.
 
+import { use, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { useCreateQuiz } from "@/hooks/useQuizzes";
+import { useQuizDetail, useUpdateQuiz, useDeleteQuiz } from "@/hooks/useQuizzes";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +17,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2, Globe, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, Lock, Trash2, Save } from "lucide-react";
 import Link from "next/link";
 import { AxiosError } from "axios";
 
@@ -34,10 +35,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function Page() {
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
-  const { mutateAsync: createQuiz, isPending } = useCreateQuiz();
+  
+  const { data: quiz, isLoading: isFetching, isError } = useQuizDetail(id);
+  const { mutateAsync: updateQuiz, isPending: isUpdating } = useUpdateQuiz();
+  const { mutateAsync: deleteQuiz, isPending: isDeleting } = useDeleteQuiz();
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -48,48 +55,105 @@ export default function Page() {
     },
   });
 
+  useEffect(() => {
+    if (quiz) {
+      form.reset({
+        title: quiz.title,
+        description: quiz.description || "",
+        is_public: quiz.is_public,
+      });
+    }
+  }, [quiz, form]);
+
   const onSubmit = async (values: FormValues) => {
     try {
-      const newQuiz = await createQuiz(values);
+      await updateQuiz({ id, data: values });
       toast({
-        title: "Tạo Quiz thành công!",
-        description: "Bây giờ bạn có thể thêm câu hỏi vào bộ quiz này.",
+        title: "Thành công",
+        description: "Cập nhật thông tin Quiz thành công.",
       });
-      router.push(`/quiz/${newQuiz.id}/questions`);
+      router.push(`/quiz/${id}/questions`);
     } catch (error) {
       const axiosError = error as AxiosError<{ detail: string | Record<string, unknown>[] }>;
       let errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại sau.";
-      
       const detail = axiosError.response?.data?.detail;
       if (typeof detail === "string") {
         errorMessage = detail;
       } else if (Array.isArray(detail) && detail.length > 0 && detail[0].msg && typeof detail[0].msg === "string") {
         errorMessage = detail[0].msg;
       }
-
       toast({
-        title: "Tạo Quiz thất bại",
+        title: "Cập nhật thất bại",
         description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await deleteQuiz(id);
+      toast({
+        title: "Đã xóa Quiz",
+        description: "Bộ câu hỏi của bạn đã được xóa hoàn toàn.",
+      });
+      setIsDeleteDialogOpen(false);
+      router.push("/dashboard");
+    } catch {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa quiz lúc này.",
+        variant: "destructive",
+      });
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  if (isFetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (isError || !quiz) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <p className="text-red-500 font-medium mb-4">Không tìm thấy quiz hoặc bạn không có quyền chỉnh sửa.</p>
+        <Link href="/dashboard">
+          <Button variant="outline">Quay lại</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/50 py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-4"
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <Link
+              href={`/quiz/${id}/questions`}
+              className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Quay lại chi tiết
+            </Link>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Chỉnh sửa Quiz</h1>
+            <p className="text-slate-500 mt-2">Cập nhật thông tin chung cho &quot;{quiz.title}&quot;.</p>
+          </div>
+          
+          <Button 
+            variant="destructive" 
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Quay lại Dashboard
-          </Link>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tạo Bộ Câu Hỏi Mới</h1>
-          <p className="text-slate-500 mt-2">Bắt đầu bằng cách điền thông tin cơ bản cho Quiz của bạn.</p>
+            <Trash2 className="w-4 h-4" />
+            Xóa Quiz
+          </Button>
         </div>
 
         {/* Form Card */}
@@ -105,11 +169,8 @@ export default function Page() {
                     <FormItem>
                       <FormLabel className="text-base font-semibold text-slate-900">Tiêu đề Quiz</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nhập tên bộ câu hỏi (VD: Kiến thức chung 2024)" {...field} className="text-base h-12" />
+                        <Input placeholder="Nhập tên bộ câu hỏi" {...field} className="text-base h-12" />
                       </FormControl>
-                      <FormDescription>
-                        Tiêu đề ngắn gọn, súc tích giúp người chơi dễ dàng nhận biết.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -123,14 +184,11 @@ export default function Page() {
                       <FormLabel className="text-base font-semibold text-slate-900">Mô tả (Không bắt buộc)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Viết một vài dòng mô tả về bộ câu hỏi này..." 
+                          placeholder="Viết một vài dòng mô tả..." 
                           className="resize-none h-32 text-base"
                           {...field} 
                         />
                       </FormControl>
-                      <FormDescription>
-                        Mô tả chi tiết để thu hút người chơi tham gia.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -168,23 +226,21 @@ export default function Page() {
                 />
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-4">
-                  <Link href="/dashboard">
-                    <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-700">
-                      Hủy bỏ
-                    </Button>
-                  </Link>
                   <Button 
                     type="submit" 
-                    disabled={isPending}
+                    disabled={isUpdating}
                     className="bg-indigo-600 hover:bg-indigo-700 px-8 py-6 text-base font-medium transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.4)]"
                   >
-                    {isPending ? (
+                    {isUpdating ? (
                       <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Đang tạo...
+                        Đang lưu...
                       </>
                     ) : (
-                      "Lưu và Tiếp tục"
+                      <>
+                        <Save className="mr-2 h-5 w-5" />
+                        Lưu Thay Đổi
+                      </>
                     )}
                   </Button>
                 </div>
@@ -194,6 +250,26 @@ export default function Page() {
         </div>
 
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title={
+          <>
+            <Trash2 className="w-5 h-5" />
+            Xóa Bộ Câu Hỏi
+          </>
+        }
+        description={
+          <>
+            Bạn có chắc chắn muốn xóa vĩnh viễn bộ câu hỏi <strong>&quot;{quiz.title}&quot;</strong> không? Hành động này không thể hoàn tác và toàn bộ câu hỏi bên trong sẽ bị mất.
+          </>
+        }
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        confirmText="Đồng ý Xóa"
+      />
     </div>
   );
 }
