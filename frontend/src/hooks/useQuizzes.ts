@@ -11,7 +11,6 @@ export const useQuizzes = () => {
   return useQuery({
     queryKey: ["quizzes"],
     queryFn: fetchQuizzes,
-    staleTime: 60_000,
   });
 };
 
@@ -41,13 +40,15 @@ export const fetchQuizDetail = async (id: string): Promise<QuizDetailResponse> =
   return data;
 };
 
-export const useQuizDetail = (id: string) => {
+export const useQuiz = (id: string) => {
   return useQuery({
     queryKey: ["quiz", id],
     queryFn: () => fetchQuizDetail(id),
-    staleTime: 0,
   });
 };
+
+// Keeping useQuizDetail for backward compatibility if needed, but useQuiz is preferred by QB-039
+export const useQuizDetail = useQuiz;
 
 export const useUpdateQuiz = () => {
   const queryClient = useQueryClient();
