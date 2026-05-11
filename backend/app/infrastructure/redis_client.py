@@ -7,7 +7,7 @@ _pool: aioredis.Redis | None = None
 async def get_redis() -> aioredis.Redis:
     global _pool
     if _pool is None:
-        _pool = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        _pool = aioredis.from_url(settings.redis_url, decode_responses=True)
     return _pool
 
 # ─────────────────────────────────────────────────
@@ -18,17 +18,29 @@ async def publish_room_event(room_code: str, payload: dict):
     await r.publish(f"room:{room_code}", json.dumps(payload))
 
 # ─────────────────────────────────────────────────
-# Background task: subscribe và forward tới WS clients
 async def redis_subscriber_task(room_code: str):
-    """Chạy song song với WebSocket endpoint, mỗi phòng 1 task."""
+    """
+    Bridge kết nối giữa Redis Pub/Sub và WebSocket clients.
+    Chạy như 1 asyncio task riêng cho mỗi phòng đang active trên worker này.
+    """
     from app.infrastructure.connection_manager import manager
-    import json, asyncio
+    import json
+    import asyncio
 
     r = await get_redis()
     pubsub = r.pubsub()
     await pubsub.subscribe(f"room:{room_code}")
 
-    async for message in pubsub.listen():
-        if message["type"] == "message":
-            data = json.loads(message["data"])
-            await manager.broadcast_room(room_code, data)
+    try:
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                data = json.loads(message["data"])
+                await manager.broadcast_room(room_code, data)
+            
+            # Tự kết thúc task nếu phòng không còn ai tham gia trên worker này
+            if manager.get_connection_count(room_code) == 0:
+                break
+    finally:
+        # Đảm bảo dọn dẹp subscription
+        await pubsub.unsubscribe(f"room:{room_code}")
+        await pubsub.close()
