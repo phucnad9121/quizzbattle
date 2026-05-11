@@ -67,7 +67,7 @@ function JoinRoomContent() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black overflow-hidden relative min-h-screen">
+    <div className="flex flex-1 items-center justify-center p-4 bg-[#020617] overflow-hidden relative min-h-screen">
       {/* Fixed Back Button */}
       <div className="absolute top-6 left-6 z-50">
         <Button 
@@ -81,9 +81,10 @@ function JoinRoomContent() {
       </div>
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse [animation-delay:1s]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse [animation-delay:3s]" />
       </div>
+
 
       <Card className="w-full max-w-md border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_50px_rgba(79,70,229,0.2)] relative overflow-hidden group">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />

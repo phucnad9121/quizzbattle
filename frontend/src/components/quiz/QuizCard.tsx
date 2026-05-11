@@ -16,54 +16,54 @@ export function QuizCard({ quiz }: QuizCardProps) {
   return (
     <Link
       href={`/quiz/${quiz.id}/questions`}
-      className="group block overflow-hidden rounded-2xl bg-white/50 backdrop-blur-xl border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-1"
+      className="group block overflow-hidden rounded-[2rem] bg-white/5 backdrop-blur-md border border-white/10 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 shadow-2xl"
     >
       {/* Cover Image Placeholder */}
-      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+      <div className="relative h-48 w-full overflow-hidden bg-linear-to-br from-indigo-500 via-purple-600 to-pink-500">
         {quiz.cover_url ? (
           <img
             src={quiz.cover_url}
             alt={quiz.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-            <span className="text-4xl font-bold text-white/30 uppercase tracking-wider">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+            <span className="text-5xl font-black text-white/20 uppercase tracking-widest italic">
               {quiz.title.slice(0, 2)}
             </span>
           </div>
         )}
         
         {/* Badge */}
-        <div className="absolute top-4 right-4 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-md shadow-sm border border-white/10 flex items-center gap-1.5 transition-colors duration-300
-          ${quiz.is_public ? 'bg-emerald-500/80 text-white' : 'bg-slate-800/80 text-white'}"
-          style={{ backgroundColor: quiz.is_public ? "rgba(16, 185, 129, 0.85)" : "rgba(30, 41, 59, 0.85)" }}
+        <div className="absolute top-4 right-4 rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-xl border border-white/20 flex items-center gap-2 transition-all duration-300 shadow-lg
+          ${quiz.is_public ? 'bg-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 text-zinc-400'}"
         >
           {quiz.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-          {quiz.is_public ? "Public" : "Private"}
+          {quiz.is_public ? "Công khai" : "Riêng tư"}
         </div>
       </div>
 
-      <div className="p-5">
-        <h3 className="font-bold text-lg text-slate-800 line-clamp-1 mb-2 group-hover:text-indigo-600 transition-colors">
+      <div className="p-6">
+        <h3 className="font-black text-xl text-white uppercase italic tracking-tight line-clamp-1 mb-2 group-hover:text-indigo-400 transition-colors">
           {quiz.title}
         </h3>
         
-        <p className="text-sm text-slate-500 line-clamp-2 min-h-[40px] mb-4">
+        <p className="text-sm text-zinc-400 font-medium line-clamp-2 min-h-[40px] mb-6">
           {quiz.description || "Chưa có mô tả nào cho bộ câu hỏi này."}
         </p>
 
-        <div className="flex items-center justify-between text-xs font-medium text-slate-500 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-md">
-            <HelpCircle className="w-3.5 h-3.5 text-indigo-500" />
-            <span>{quiz.question_count} câu hỏi</span>
+        <div className="flex items-center justify-between pt-5 border-t border-white/5">
+          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+            <HelpCircle className="w-4 h-4 text-indigo-400" />
+            <span className="text-xs font-black text-indigo-400 uppercase tracking-tighter">{quiz.question_count} CÂU HỎI</span>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>{formattedDate}</span>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Calendar className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-tight">{formattedDate}</span>
           </div>
         </div>
       </div>
     </Link>
+
   );
 }

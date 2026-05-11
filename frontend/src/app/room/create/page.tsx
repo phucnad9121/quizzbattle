@@ -135,7 +135,7 @@ export default function CreateRoomPage() {
                   </label>
                   <div className="relative group">
                     <select
-                      className="w-full bg-black/40 border-2 border-white/5 rounded-2xl p-5 text-lg font-bold appearance-none focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
+                      className="w-full bg-white/80 border-2 border-white/5 rounded-2xl p-5 text-lg font-bold appearance-none focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
                       value={selectedQuiz ?? ""}
                       onChange={(e) => setSelectedQuiz(e.target.value)}
                     >

@@ -9,52 +9,65 @@ export default function DashboardPage() {
   const { data, isLoading, isError } = useQuizzes();
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="min-h-screen bg-[#020617] text-white pb-20 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse [animation-delay:3s]" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Thư viện Quiz của bạn</h1>
-            <p className="text-slate-500 mt-1">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-16">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full mb-2">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Quản lý Quiz</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
+              Thư viện <span className="text-indigo-500">Quiz</span> của bạn
+            </h1>
+            <p className="text-zinc-400 font-medium max-w-md">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          
+          <div className="flex flex-wrap items-center gap-4">
             <Link
               href="/room/create"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-all shadow-[0_0_18px_rgba(16,185,129,0.35)] hover:shadow-[0_0_22px_rgba(16,185,129,0.55)] active:scale-95"
+              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)]"
             >
-              <PlaySquare className="w-5 h-5" />
-              Tạo Phòng
+              <PlaySquare className="w-6 h-6" />
+              <span>Tạo Phòng</span>
             </Link>
+            
             <Link
               href="/room/join"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all active:scale-95"
+              className="inline-flex items-center justify-center gap-3 px-8 py-5 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl border border-white/10 backdrop-blur-md transition-all hover:scale-105 active:scale-95"
             >
-              Vào Phòng
+              <span>Vào Phòng</span>
             </Link>
+            
             <Link
               href="/quiz/create"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] active:scale-95"
+              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-linear-to-r from-indigo-500 to-purple-600 text-white font-black uppercase italic rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(79,70,229,0.3)]"
             >
-              <PlusCircle className="w-5 h-5" />
-              Tạo Quiz Mới
+              <PlusCircle className="w-6 h-6" />
+              <span>Tạo Quiz Mới</span>
             </Link>
           </div>
         </div>
 
         {/* Loading State */}
         {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="rounded-2xl bg-white border border-slate-100 overflow-hidden shadow-sm animate-pulse">
-                <div className="h-40 bg-slate-200"></div>
-                <div className="p-5">
-                  <div className="h-5 bg-slate-200 rounded-md w-3/4 mb-3"></div>
-                  <div className="h-4 bg-slate-100 rounded-md w-full mb-2"></div>
-                  <div className="h-4 bg-slate-100 rounded-md w-2/3 mb-6"></div>
-                  <div className="flex justify-between border-t border-slate-100 pt-4">
-                    <div className="h-6 bg-slate-100 rounded w-20"></div>
-                    <div className="h-4 bg-slate-100 rounded w-16 mt-1"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden animate-pulse">
+                <div className="h-48 bg-white/5"></div>
+                <div className="p-6 space-y-4">
+                  <div className="h-6 bg-white/10 rounded-lg w-3/4"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-white/5 rounded-md w-full"></div>
+                    <div className="h-4 bg-white/5 rounded-md w-2/3"></div>
                   </div>
                 </div>
               </div>
@@ -64,30 +77,30 @@ export default function DashboardPage() {
 
         {/* Error State */}
         {isError && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center mt-10">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-500 mb-4">
-              <span className="text-xl font-bold">!</span>
+          <div className="rounded-[2.5rem] border border-red-500/20 bg-red-500/10 backdrop-blur-md p-12 text-center mt-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 text-red-500 mb-6">
+              <span className="text-2xl font-black">!</span>
             </div>
-            <h3 className="text-lg font-semibold text-red-800 mb-2">Lỗi tải dữ liệu</h3>
-            <p className="text-red-600">Đã có lỗi xảy ra khi tải danh sách quiz. Vui lòng thử lại sau.</p>
+            <h3 className="text-2xl font-black text-white uppercase italic mb-2">Lỗi tải dữ liệu</h3>
+            <p className="text-zinc-400">Đã có lỗi xảy ra khi tải danh sách quiz. Vui lòng thử lại sau.</p>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && !isError && data?.items.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/50 backdrop-blur-sm p-16 text-center mt-10">
-            <div className="bg-indigo-50 p-4 rounded-full mb-5">
-              <PlaySquare className="w-10 h-10 text-indigo-500" />
+          <div className="flex flex-col items-center justify-center rounded-[3rem] border-2 border-dashed border-white/10 bg-white/5 backdrop-blur-md p-20 text-center mt-10 group">
+            <div className="bg-indigo-500/20 p-6 rounded-[2rem] mb-6 group-hover:rotate-12 transition-transform duration-500">
+              <PlaySquare className="w-12 h-12 text-indigo-500" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Bạn chưa có Quiz nào!</h3>
-            <p className="text-slate-500 max-w-sm mb-8">
+            <h3 className="text-3xl font-black text-white uppercase italic mb-3">Bạn chưa có Quiz nào!</h3>
+            <p className="text-zinc-400 max-w-sm mb-10 text-lg">
               Bắt đầu tạo bộ câu hỏi đầu tiên của bạn để chia sẻ và thách đấu với bạn bè ngay hôm nay.
             </p>
             <Link
               href="/quiz/create"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all"
+              className="inline-flex items-center gap-3 px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase italic rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.4)] transition-all hover:scale-105"
             >
-              <PlusCircle className="w-5 h-5" />
+              <PlusCircle className="w-6 h-6" />
               Tạo Quiz đầu tiên
             </Link>
           </div>
@@ -95,7 +108,7 @@ export default function DashboardPage() {
 
         {/* Data Grid */}
         {!isLoading && !isError && data && data.items.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {data.items.map((quiz) => (
               <QuizCard key={quiz.id} quiz={quiz} />
             ))}
@@ -106,3 +119,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

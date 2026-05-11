@@ -8,9 +8,10 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#020617]">
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+      <main className="w-full">{children}</main>
     </div>
+
   );
 }

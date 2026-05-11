@@ -92,16 +92,16 @@ function OptionItem({ index, watchType, remove, form, setCorrectAnswer }: Option
   });
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${isCorrect ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
+    <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isCorrect ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)]' : 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20'}`}>
       <button
         type="button"
         onClick={() => setCorrectAnswer(index)}
-        className="flex-shrink-0 focus:outline-none"
+        className="flex-shrink-0 focus:outline-none group"
       >
         {isCorrect ? (
-          <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+          <CheckCircle2 className="w-8 h-8 text-emerald-400" />
         ) : (
-          <Circle className="w-6 h-6 text-slate-300 hover:text-indigo-400 transition-colors" />
+          <Circle className="w-8 h-8 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
         )}
       </button>
       
@@ -114,7 +114,7 @@ function OptionItem({ index, watchType, remove, form, setCorrectAnswer }: Option
               <Input 
                 {...inputField} 
                 placeholder={`Đáp án ${index + 1}`} 
-                className="border-0 shadow-none focus-visible:ring-0 bg-transparent px-0 font-medium h-auto py-1"
+                className="border-0 shadow-none focus-visible:ring-0 bg-transparent px-0 font-bold text-white text-lg h-auto py-1 placeholder:text-zinc-600"
                 readOnly={watchType === "true_false"}
               />
             </FormControl>
@@ -128,9 +128,9 @@ function OptionItem({ index, watchType, remove, form, setCorrectAnswer }: Option
           variant="ghost"
           size="icon"
           onClick={() => remove(index)}
-          className="text-slate-400 hover:text-red-500 h-8 w-8"
+          className="text-zinc-500 hover:text-red-400 hover:bg-red-400/10 h-10 w-10 rounded-xl transition-all"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-5 h-5" />
         </Button>
       )}
     </div>
@@ -184,30 +184,34 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
           name="question_text"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nội dung câu hỏi</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Nội dung câu hỏi</FormLabel>
               <FormControl>
-                <Input placeholder="Điền câu hỏi của bạn..." {...field} />
+                <Input 
+                  placeholder="Điền câu hỏi của bạn..." 
+                  {...field} 
+                  className="bg-white/5 border-2 border-white/5 rounded-2xl h-16 px-6 text-xl font-bold focus:border-indigo-500/50 focus:ring-0 transition-all text-white placeholder:text-zinc-700"
+                />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400 font-bold" />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
             control={form.control}
             name="time_limit_secs"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Thời gian</FormLabel>
-                  <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Thời gian giới hạn</FormLabel>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                     {field.value} giây
                   </span>
                 </div>
@@ -218,10 +222,10 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
                     step={5}
                     value={[field.value]}
                     onValueChange={(vals) => field.onChange(vals[0])}
-                    className="py-3"
+                    className="py-2"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400 font-bold" />
               </FormItem>
             )}
           />
@@ -229,12 +233,17 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
             control={form.control}
             name="points"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Điểm số</FormLabel>
+              <FormItem className="space-y-3">
+                <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Điểm số</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} {...field} />
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    {...field} 
+                    className="bg-white/5 border-2 border-white/5 rounded-2xl h-14 px-6 text-lg font-bold focus:border-indigo-500/50 focus:ring-0 transition-all text-white"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400 font-bold" />
               </FormItem>
             )}
           />
@@ -244,11 +253,11 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
           control={form.control}
           name="question_type"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Loại câu hỏi</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Loại câu hỏi</FormLabel>
               <FormControl>
                 <select
-                  className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 disabled:opacity-50"
+                  className="flex h-14 w-full rounded-2xl border-2 border-white/5 bg-white/5 px-6 py-2 text-lg font-bold text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
                   {...field}
                   onChange={(e) => {
                     field.onChange(e);
@@ -267,36 +276,36 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
                     }
                   }}
                 >
-                  <option value="multiple_choice">Nhiều lựa chọn</option>
-                  <option value="true_false">Đúng / Sai</option>
+                  <option value="multiple_choice" className="bg-slate-900 text-white">Nhiều lựa chọn</option>
+                  <option value="true_false" className="bg-slate-900 text-white">Đúng / Sai</option>
                 </select>
               </FormControl>
             </FormItem>
           )}
         />
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <FormLabel>Các đáp án</FormLabel>
+            <FormLabel className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Danh sách đáp án</FormLabel>
             {watchType === "multiple_choice" && fields.length < 4 && (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => append({ option_text: "", is_correct: false })}
-                className="h-8 flex items-center gap-1 text-xs"
+                className="h-10 flex items-center gap-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 hover:bg-indigo-500/10 text-indigo-400 hover:text-indigo-300 transition-all"
               >
-                <PlusCircle className="w-3.5 h-3.5" />
+                <PlusCircle className="w-4 h-4" />
                 Thêm đáp án
               </Button>
             )}
           </div>
           
           {form.formState.errors.options?.root?.message && (
-            <p className="text-sm font-medium text-red-500">{form.formState.errors.options.root.message}</p>
+            <p className="text-xs font-bold text-red-400 bg-red-400/10 px-4 py-2 rounded-xl">{form.formState.errors.options.root.message}</p>
           )}
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-4">
             {fields.map((field, index) => (
               <OptionItem 
                 key={field.id}
@@ -310,12 +319,16 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isPending }: Que
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Hủy
+        <div className="flex justify-end gap-4 pt-8 border-t border-white/5">
+          <Button type="button" variant="ghost" onClick={onCancel} className="h-14 px-8 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 font-black uppercase tracking-widest text-[10px]">
+            Hủy bỏ
           </Button>
-          <Button type="submit" disabled={isPending} className="bg-indigo-600 hover:bg-indigo-700">
-            {initialData ? "Cập nhật" : "Tạo mới"}
+          <Button 
+            type="submit" 
+            disabled={isPending} 
+            className="h-14 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase italic text-lg shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 active:scale-95"
+          >
+            {isPending ? <Loader2 className="animate-spin" /> : (initialData ? "Cập nhật ngay" : "Lưu câu hỏi")}
           </Button>
         </div>
       </form>

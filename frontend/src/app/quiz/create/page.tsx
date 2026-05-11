@@ -76,41 +76,59 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-10">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#020617] text-white py-10 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse [animation-delay:3s]" />
+      </div>
+
+      <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-12">
           <Link
             href="/dashboard"
-            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-4"
+            className="inline-flex items-center text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors mb-6 group"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
+            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Quay lại Dashboard
           </Link>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tạo Bộ Câu Hỏi Mới</h1>
-          <p className="text-slate-500 mt-2">Bắt đầu bằng cách điền thông tin cơ bản cho Quiz của bạn.</p>
+          <div className="space-y-3">
+             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Khởi tạo</span>
+             </div>
+             <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
+                Tạo <span className="text-indigo-500">Bí Kíp</span> Mới
+             </h1>
+             <p className="text-zinc-400 font-medium text-lg">Bắt đầu bằng cách điền thông tin cơ bản cho bộ câu hỏi của bạn.</p>
+          </div>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 sm:p-8">
+        <div className="bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
+          <div className="p-8 sm:p-12">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
                 
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-semibold text-slate-900">Tiêu đề Quiz</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-sm font-black uppercase tracking-widest text-white ml-1">Tiêu đề Quiz</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nhập tên bộ câu hỏi (VD: Kiến thức chung 2024)" {...field} className="text-base h-12" />
+                        <Input 
+                          placeholder="Nhập tên bộ câu hỏi (VD: Kiến thức chung 2024)" 
+                          {...field} 
+                          className="bg-white/5 border-2 border-white/5 rounded-2xl h-16 px-6 text-lg font-bold focus:border-indigo-500/50 focus:ring-0 transition-all placeholder:text-zinc-600" 
+                        />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-zinc-500 font-medium ml-1">
                         Tiêu đề ngắn gọn, súc tích giúp người chơi dễ dàng nhận biết.
                       </FormDescription>
-                      <FormMessage />
+                      <FormMessage className="text-red-400 font-bold" />
                     </FormItem>
                   )}
                 />
@@ -119,19 +137,19 @@ export default function Page() {
                   control={form.control}
                   name="description"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-semibold text-slate-900">Mô tả (Không bắt buộc)</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-sm font-black uppercase tracking-widest text-white ml-1">Mô tả (Không bắt buộc)</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="Viết một vài dòng mô tả về bộ câu hỏi này..." 
-                          className="resize-none h-32 text-base"
+                          className="bg-white/5 border-2 border-white/5 rounded-2xl min-h-[140px] p-6 text-lg font-medium focus:border-indigo-500/50 focus:ring-0 transition-all placeholder:text-zinc-600 resize-none" 
                           {...field} 
                         />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-zinc-500 font-medium ml-1">
                         Mô tả chi tiết để thu hút người chơi tham gia.
                       </FormDescription>
-                      <FormMessage />
+                      <FormMessage className="text-red-400 font-bold" />
                     </FormItem>
                   )}
                 />
@@ -140,13 +158,13 @@ export default function Page() {
                   control={form.control}
                   name="is_public"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-slate-200 p-4 shadow-sm bg-slate-50/50">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                          {field.value ? <Globe className="w-5 h-5 text-emerald-500" /> : <Lock className="w-5 h-5 text-slate-500" />}
+                    <FormItem className="flex flex-row items-center justify-between rounded-[2rem] border border-white/10 p-6 bg-white/5 backdrop-blur-md">
+                      <div className="space-y-1">
+                        <FormLabel className="text-lg font-black italic uppercase tracking-tight text-white flex items-center gap-3">
+                          {field.value ? <Globe className="w-6 h-6 text-emerald-400" /> : <Lock className="w-6 h-6 text-zinc-500" />}
                           Chế độ công khai
                         </FormLabel>
-                        <FormDescription className="mt-1">
+                        <FormDescription className="text-zinc-500 font-medium">
                           {field.value 
                             ? "Bất kỳ ai cũng có thể tìm thấy và tham gia bộ câu hỏi này." 
                             : "Chỉ bạn mới có thể nhìn thấy bộ câu hỏi này."}
@@ -160,27 +178,27 @@ export default function Page() {
                             checked={field.value}
                             onChange={field.onChange}
                           />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                          <div className="w-14 h-8 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
                         </label>
                       </FormControl>
                     </FormItem>
                   )}
                 />
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-4">
+                <div className="pt-8 border-t border-white/5 flex items-center justify-end gap-6">
                   <Link href="/dashboard">
-                    <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-700">
+                    <Button type="button" variant="ghost" className="h-14 px-8 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 font-black uppercase tracking-widest text-[10px]">
                       Hủy bỏ
                     </Button>
                   </Link>
                   <Button 
                     type="submit" 
                     disabled={isPending}
-                    className="bg-indigo-600 hover:bg-indigo-700 px-8 py-6 text-base font-medium transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.4)]"
+                    className="h-16 px-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase italic rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 active:scale-95"
                   >
                     {isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        <Loader2 className="mr-3 h-6 w-6 animate-spin" />
                         Đang tạo...
                       </>
                     ) : (
@@ -195,5 +213,6 @@ export default function Page() {
 
       </div>
     </div>
+
   );
 }

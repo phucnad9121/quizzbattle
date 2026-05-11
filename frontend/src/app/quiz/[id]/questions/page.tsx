@@ -62,37 +62,37 @@ function SortableQuestionItem({
     <div 
       ref={setNodeRef} 
       style={style} 
-      className={`bg-white rounded-xl border p-4 shadow-sm flex items-start gap-4 group ${isDragging ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500 opacity-90' : 'border-slate-200'}`}
+      className={`bg-white/5 backdrop-blur-md rounded-[1.5rem] border p-5 flex items-start gap-4 group transition-all duration-300 ${isDragging ? 'border-indigo-500 shadow-[0_0_30px_rgba(79,70,229,0.3)] ring-1 ring-indigo-500/50 scale-[1.02] z-50' : 'border-white/5 hover:border-white/20 hover:bg-white/[0.08]'}`}
     >
       <div 
         {...attributes} 
         {...listeners} 
-        className="mt-1 cursor-grab active:cursor-grabbing p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 rounded-md transition-colors"
+        className="mt-1.5 cursor-grab active:cursor-grabbing p-2 text-zinc-600 hover:text-indigo-400 hover:bg-white/5 rounded-xl transition-all"
       >
         <GripVertical className="w-5 h-5" />
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
-            Câu {index + 1}
-          </span>
-          <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-            <span>{question.time_limit_secs}s</span>
-            <span>•</span>
-            <span>{question.points} pts</span>
-            <span>•</span>
-            <span>{question.question_type === "true_false" ? "Đúng/Sai" : "Nhiều lựa chọn"}</span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+              Câu {index + 1}
+            </span>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">
+              <span className="bg-white/5 px-2 py-0.5 rounded-md">{question.time_limit_secs}S</span>
+              <span className="bg-white/5 px-2 py-0.5 rounded-md text-emerald-400">{question.points} PTS</span>
+              <span className="bg-white/5 px-2 py-0.5 rounded-md text-purple-400">{question.question_type === "true_false" ? "Đúng/Sai" : "Nhiều lựa chọn"}</span>
+            </div>
           </div>
         </div>
-        <h3 className="text-base font-semibold text-slate-800 line-clamp-2">{question.question_text}</h3>
+        <h3 className="text-lg font-bold text-white leading-snug line-clamp-2 italic uppercase tracking-tight">{question.question_text}</h3>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" onClick={() => onEdit(question)} className="text-slate-500 hover:text-indigo-600">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(question)} className="h-10 w-10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10">
           <Pencil className="w-4 h-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(question)} className="text-slate-500 hover:text-red-600">
+        <Button variant="ghost" size="icon" onClick={() => onDelete(question)} className="h-10 w-10 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/10">
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
@@ -186,56 +186,76 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   };
 
   if (isLoading || !quiz) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-10">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#020617] text-white py-10 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse [animation-delay:3s]" />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <Link href="/dashboard" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 mb-2">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
+        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="space-y-4">
+            <Link href="/dashboard" className="inline-flex items-center text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors group">
+              <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Quay lại Dashboard
             </Link>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{quiz.title}</h1>
-            <p className="text-slate-500 flex items-center gap-2 mt-2">
-              <HelpCircle className="w-4 h-4" /> {questions.length} câu hỏi
-            </p>
+            <div className="space-y-2">
+               <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">{quiz.title}</h1>
+               <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+                    <HelpCircle className="w-4 h-4 text-indigo-400" /> 
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">{questions.length} CÂU HỎI</span>
+                  </div>
+                  {isReordering && (
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-400 animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Đang lưu thứ tự...
+                    </div>
+                  )}
+               </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          
+          <div className="flex items-center gap-4">
             <Link href={`/quiz/${quizId}/edit`}>
-              <Button variant="outline" className="gap-2">
-                <Settings className="w-4 h-4" /> Cài đặt chung
+              <Button variant="ghost" className="h-14 px-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase tracking-widest text-[10px] gap-3 transition-all">
+                <Settings className="w-4 h-4" /> Cài đặt
               </Button>
             </Link>
             <Button 
-              className="bg-indigo-600 hover:bg-indigo-700 gap-2 shadow-md"
+              className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase italic text-lg gap-3 shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 active:scale-95"
               onClick={() => { setEditingQuestion(null); setIsFormOpen(true); }}
             >
-              <Plus className="w-4 h-4" /> Thêm câu hỏi
+              <Plus className="w-6 h-6" /> Thêm câu hỏi
             </Button>
           </div>
         </div>
 
-        {/* Questions List */}
-        <div className="bg-white/50 backdrop-blur-sm rounded-3xl border border-slate-200 p-6 shadow-sm min-h-[400px]">
-          {isReordering && (
-            <div className="absolute top-4 right-4 flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full z-10">
-              <Loader2 className="w-4 h-4 animate-spin" /> Đang lưu thứ tự...
-            </div>
-          )}
-
+        {/* Questions List Container */}
+        <div className="bg-white/5 backdrop-blur-2xl rounded-[3rem] border border-white/10 p-8 shadow-2xl min-h-[500px]">
           {questions.length === 0 ? (
-            <div className="h-[300px] flex flex-col items-center justify-center text-slate-400">
-              <HelpCircle className="w-12 h-12 mb-4 opacity-20" />
-              <p>Chưa có câu hỏi nào trong bộ Quiz này.</p>
+            <div className="h-[400px] flex flex-col items-center justify-center text-zinc-500 text-center space-y-6">
+              <div className="w-24 h-24 rounded-[2rem] bg-white/5 flex items-center justify-center border border-white/5">
+                <HelpCircle className="w-10 h-10 opacity-20" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-2xl font-black italic uppercase tracking-tight text-white">Chưa có câu hỏi nào</p>
+                <p className="text-zinc-500 font-medium max-w-[240px]">Hãy bắt đầu xây dựng bộ Quiz của bạn bằng cách thêm câu hỏi đầu tiên.</p>
+              </div>
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {questions.map((q, index) => (
                     <SortableQuestionItem 
                       key={q.id} 
@@ -255,16 +275,20 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
       {/* Form Modal */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingQuestion ? "Chỉnh sửa câu hỏi" : "Thêm câu hỏi mới"}</DialogTitle>
-          </DialogHeader>
-          <QuestionForm 
-            initialData={editingQuestion} 
-            onSubmit={handleFormSubmit} 
-            onCancel={() => setIsFormOpen(false)} 
-            isPending={isCreating || isUpdating} 
-          />
+        <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto bg-[#020617] border-white/10 p-0 rounded-[3rem] overflow-hidden">
+          <div className="p-8 md:p-12 space-y-8">
+            <DialogHeader>
+              <DialogTitle className="text-4xl font-black italic uppercase tracking-tighter text-white">
+                {editingQuestion ? "Cập nhật" : "Thêm"} <span className="text-indigo-500">Câu hỏi</span>
+              </DialogTitle>
+            </DialogHeader>
+            <QuestionForm 
+              initialData={editingQuestion} 
+              onSubmit={handleFormSubmit} 
+              onCancel={() => setIsFormOpen(false)} 
+              isPending={isCreating || isUpdating} 
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -273,10 +297,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         title="Xóa Câu Hỏi"
-        description="Bạn có chắc chắn muốn xóa câu hỏi này không? Không thể hoàn tác."
+        description="Hành động này không thể hoàn tác. Bạn có chắc chắn muốn loại bỏ câu hỏi này khỏi bộ sưu tập?"
         onConfirm={handleDeleteConfirm}
         isLoading={isDeleting}
-        confirmText="Xóa"
+        confirmText="Xóa ngay"
       />
     </div>
   );
