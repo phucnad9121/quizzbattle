@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
+import { AuthGate } from "@/components/auth/AuthGate";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -34,7 +35,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           <AuthInitializer />
-          {children}
+          <AuthGate>{children}</AuthGate>
           <Toaster />
         </QueryProvider>
       </body>

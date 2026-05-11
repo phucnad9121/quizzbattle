@@ -8,6 +8,26 @@ from app.repositories.quiz_repo import QuestionRepository, QuizRepository
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
+
+@router.get("/{id}", response_model=QuestionResponse)
+async def get_question(
+    id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    question_repo = QuestionRepository(session)
+    quiz_repo = QuizRepository(session)
+
+    question = await question_repo.get_by_id(id)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    quiz = await quiz_repo.get_by_id(question.quiz_id)
+    if not quiz or quiz.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return question
+
 @router.patch("/{id}", response_model=QuestionResponse)
 async def update_question(
     id: uuid.UUID,
@@ -49,11 +69,18 @@ async def update_question(
                 
     update_data = data.model_dump(exclude_unset=True)
     if update_data:
-        question = await question_repo.update(id, update_data)
-        await session.commit()
-        await session.refresh(question, ["options"])
+        try:
+            question = await question_repo.update(id, update_data)
+            await session.commit()
+        except Exception as e:
+            import traceback
+            print(f"Error updating question: {e}")
+            traceback.print_exc()
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
         
     return question
+
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_question(

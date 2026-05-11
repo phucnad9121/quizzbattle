@@ -18,13 +18,28 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Thư viện Quiz của bạn</h1>
             <p className="text-slate-500 mt-1">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
           </div>
-          <Link
-            href="/quiz/create"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] active:scale-95"
-          >
-            <PlusCircle className="w-5 h-5" />
-            Tạo Quiz Mới
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/room/create"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-all shadow-[0_0_18px_rgba(16,185,129,0.35)] hover:shadow-[0_0_22px_rgba(16,185,129,0.55)] active:scale-95"
+            >
+              <PlaySquare className="w-5 h-5" />
+              Tạo Phòng
+            </Link>
+            <Link
+              href="/room/join"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all active:scale-95"
+            >
+              Vào Phòng
+            </Link>
+            <Link
+              href="/quiz/create"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] active:scale-95"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Tạo Quiz Mới
+            </Link>
+          </div>
         </div>
 
         {/* Loading State */}

@@ -26,6 +26,10 @@ class ConnectionManager:
             if room_code in self._rooms:
                 del self._rooms[room_code]
 
+            task = self._tasks.pop(room_code, None)
+            if task and not task.done():
+                task.cancel()
+
     async def broadcast_room(self, room_code: str, message: dict):
         """Gửi tới tất cả WS clients trong phòng (cùng worker)."""
         if room_code not in self._rooms:

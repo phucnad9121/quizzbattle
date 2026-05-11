@@ -131,10 +131,11 @@ export function LoginForm() {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting} suppressHydrationWarning>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Đăng nhập
             </Button>
+
           </form>
         </Form>
       </CardContent>

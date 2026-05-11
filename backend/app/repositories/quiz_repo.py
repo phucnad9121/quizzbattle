@@ -96,29 +96,48 @@ class QuestionRepository(BaseRepository):
             self.session.add(option)
         
         await self.session.flush()
-        # Refresh to eager load options
-        await self.session.refresh(question, ["options"])
-        return question
+        return await self.get_by_id(question.id)
 
-    async def update(self, question_id: uuid.UUID, data: dict[str, Any]) -> Question | None:
-        options_data = data.pop("options", None)
+    async def update(self, id: uuid.UUID, data: dict) -> Question:
+        question = await self.get_by_id(id)
+        if not question:
+            return None
         
-        if data:
-            stmt = update(Question).where(Question.id == question_id).values(**data)
-            await self.session.execute(stmt)
+        # 1. Cập nhật các thông tin cơ bản của câu hỏi
+        for key, value in data.items():
+            if key != "options":
+                setattr(question, key, value)
         
-        if options_data is not None:
-            # delete old options
-            del_stmt = delete(AnswerOption).where(AnswerOption.question_id == question_id)
-            await self.session.execute(del_stmt)
+        # 2. Cập nhật options (Nếu có trong payload)
+        if "options" in data:
+            new_options_data = data["options"]
+            existing_options = question.options  # Đây là list các AnswerOption objects
             
-            # insert new options
-            for idx, opt in enumerate(options_data):
-                option = AnswerOption(question_id=question_id, order_index=idx, **opt)
-                self.session.add(option)
-        
+            # Cập nhật hoặc ghi đè các options hiện có theo index
+            for i, opt_data in enumerate(new_options_data):
+                if i < len(existing_options):
+                    # Cập nhật option hiện có
+                    existing_options[i].option_text = opt_data["option_text"]
+                    existing_options[i].is_correct = opt_data["is_correct"]
+                    existing_options[i].order_index = i
+                else:
+                    # Thêm option mới nếu số lượng tăng lên
+                    new_opt = AnswerOption(
+                        option_text=opt_data["option_text"],
+                        is_correct=opt_data["is_correct"],
+                        order_index=i
+                    )
+                    question.options.append(new_opt)
+            
+            # Xóa bớt các options thừa nếu số lượng giảm đi
+            # (Cẩn thận: Đoạn này vẫn có thể gây lỗi nếu xóa trúng option đã được trả lời)
+            if len(existing_options) > len(new_options_data):
+                # Chỉ xóa những options ở cuối danh sách không còn dùng tới
+                del question.options[len(new_options_data):]
+
         await self.session.flush()
-        return await self.get_by_id(question_id)
+        await self.session.refresh(question)
+        return question
 
     async def delete(self, question_id: uuid.UUID) -> bool:
         query = delete(Question).where(Question.id == question_id)

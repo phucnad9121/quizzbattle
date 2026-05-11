@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from redis.asyncio import Redis
 
-from app.db.models import GameSession, Question, AnswerOption
+from app.db.models import GameSession, Question, AnswerOption, GameParticipant
 from app.infrastructure.redis_client import publish_room_event
 
 class GameService:
@@ -48,6 +48,8 @@ class GameService:
         # Cập nhật Redis
         state_key = f"game:state:{room_code}"
         await redis.hset(state_key, mapping={
+            "session_id": str(room.id),
+            "host_id": str(room.host_id),
             "status": "in_progress",
             "current_question": "0",
             "question_start_ts": str(time.time()),
@@ -88,6 +90,8 @@ class GameService:
         r = await get_redis()
         state_key = f"game:state:{room_code}"
         
+        end_key = f"game:ended:{room_code}:{question_idx}"
+
         while remaining > 0:
             await asyncio.sleep(1)
             remaining -= 1
@@ -99,12 +103,20 @@ class GameService:
             if curr != str(question_idx):
                 return
 
-        # Hết giờ -> Kết thúc câu hỏi
-        async with AsyncSessionLocal() as db:
-            await self.end_question(db, r, room_code, question_idx)
+            # Nếu câu hỏi đã kết thúc sớm thì dừng timer
+            if await r.exists(end_key):
+                return
 
-    async def end_question(self, db: AsyncSession, redis: Redis, room_code: str, question_idx: int):
+        # Hết giờ -> Kết thúc câu hỏi (không chuyển ngay, đợi xem kết quả)
+        async with AsyncSessionLocal() as db:
+            await self.end_question(db, r, room_code, question_idx, immediate=False)
+
+    async def end_question(self, db: AsyncSession, redis: Redis, room_code: str, question_idx: int, immediate: bool = False):
         """Kết thúc câu hỏi hiện tại, show đáp án và chuẩn bị câu tiếp."""
+        end_key = f"game:ended:{room_code}:{question_idx}"
+        if not await redis.set(end_key, "1", ex=300, nx=True):
+            return
+
         # 1. Lấy thông tin phòng và câu hỏi hiện tại
         stmt = select(GameSession).where(GameSession.room_code == room_code.upper())
         res = await db.execute(stmt)
@@ -121,62 +133,110 @@ class GameService:
         if not question: return
 
         # 2. Tìm đáp án đúng
-        correct_opt = next((o for o in question.options if o.is_correct), None)
+        correct_option = next((o for o in question.options if o.is_correct), None)
         
         # 3. Lấy Leaderboard hiện tại
         leaderboard = await self.get_leaderboard(redis, room_code)
 
-        # 4. Thông báo QUESTION_END
+        # 4. Thông báo QUESTION_END ngay lập tức để giải phóng WebSocket
         await publish_room_event(room_code, {
             "type": "QUESTION_END",
             "payload": {
                 "question_idx": question_idx,
-                "correct_option_id": str(correct_opt.id) if correct_opt else None,
-                "correct_option_text": correct_opt.option_text if correct_opt else "",
+                "correct_option_id": str(correct_option.id) if correct_option else None,
+                "correct_option_text": correct_option.option_text if correct_option else "",
+                "wait_time": 0 if immediate else 5,
                 "leaderboard": leaderboard[:5]
             }
         })
 
-        # 5. Đợi 3 giây rồi sang câu tiếp hoặc kết thúc game
+        # 5. Xử lý chuyển câu trong một task riêng để không block loop
+        async def transition_task():
+            if not immediate:
+                await asyncio.sleep(5)
+            
+            # Re-fetch room in new session for safety
+            from app.db.session import AsyncSessionLocal
+            async with AsyncSessionLocal() as db_task:
+                # Kiểm tra lại xem có bị skip nhanh trong lúc đang sleep không
+                stmt_n = select(GameSession).where(GameSession.room_code == room_code.upper())
+                res_n = await db_task.execute(stmt_n)
+                r_task = res_n.scalar_one_or_none()
+                if not r_task: return
+
+                # Kiểm tra xem còn câu tiếp theo không
+                stmt_next = select(Question).where(
+                    Question.quiz_id == r_task.quiz_id, 
+                    Question.order_index == question_idx + 1
+                ).options(selectinload(Question.options))
+                res_next = await db_task.execute(stmt_next)
+                next_q = res_next.scalar_one_or_none()
+
+                if next_q:
+                    # Chuyển sang câu tiếp
+                    r_task.current_question_idx = question_idx + 1
+                    await db_task.commit()
+
+                    total_questions = int((await redis.hget(f"game:state:{room_code}", "total_questions")) or 0)
+                    if total_questions <= 0:
+                        total_questions = question_idx + 2
+
+                    # Cập nhật Redis state
+                    await redis.hset(f"game:state:{room_code}", mapping={
+                        "current_question": str(question_idx + 1),
+                        "question_start_ts": str(time.time())
+                    })
+                    
+                    # Khởi tạo timer cho câu mới
+                    asyncio.create_task(self.question_timer(room_code, question_idx + 1, next_q.time_limit_secs))
+                    
+                    # Gửi thông báo bắt đầu câu mới
+                    await publish_room_event(room_code, {
+                        "type": "QUESTION_START",
+                        "payload": {
+                            "question_id": str(next_q.id),
+                            "question_text": next_q.question_text,
+                            "question_idx": question_idx + 1,
+                            "total_questions": total_questions,
+                            "time_limit_secs": next_q.time_limit_secs,
+                            "options": [
+                                {"id": str(o.id), "option_text": o.option_text} 
+                                for o in next_q.options
+                            ]
+                        }
+                    })
+                else:
+                    # Hết câu hỏi -> GAME_OVER
+                    r_task.status = "finished"
+                    r_task.finished_at = datetime.utcnow()
+                    await db_task.commit()
+                    
+                    await redis.hset(f"game:state:{room_code}", "status", "finished")
+                    
+                    final_results = await self.sync_final_results(db_task, redis, room_code, r_task.id)
+                    
+                    await publish_room_event(room_code, {
+                        "type": "GAME_OVER",
+                        "payload": {"leaderboard": final_results[:10]}
+                    })
+
         import asyncio
-        await asyncio.sleep(3)
+        asyncio.create_task(transition_task())
 
-        # Kiểm tra xem còn câu tiếp theo không
-        stmt_next = select(Question).where(
-            Question.quiz_id == room.quiz_id, 
-            Question.order_index == question_idx + 1
-        ).options(selectinload(Question.options))
-        res_next = await db.execute(stmt_next)
-        next_q = res_next.scalar_one_or_none()
-
-        if next_q:
-            # Chuyển sang câu tiếp
-            room.current_question_idx = question_idx + 1
-            await db.commit()
+    async def skip_question(self, db: AsyncSession, redis: Redis, room_code: str, user_id: uuid.UUID):
+        """Cho phép host bỏ qua câu hỏi hiện tại."""
+        state_key = f"game:state:{room_code}"
+        state = await redis.hgetall(state_key)
+        
+        if not state or state.get("status") != "in_progress":
+            return
             
-            await redis.hset(f"game:state:{room_code}", mapping={
-                "current_question": str(question_idx + 1),
-                "question_start_ts": str(time.time())
-            })
+        if state.get("host_id") != str(user_id):
+            return # Chỉ host mới có quyền
             
-            await self._publish_question(room_code, next_q, question_idx + 1, int(await redis.hget(f"game:state:{room_code}", "total_questions")))
-            # Kích hoạt timer cho câu tiếp
-            asyncio.create_task(self.question_timer(room_code, question_idx + 1, next_q.time_limit_secs))
-        else:
-            # Hết câu hỏi -> GAME_OVER
-            room.status = "finished"
-            room.finished_at = datetime.utcnow()
-            
-            # Đồng bộ kết quả cuối cùng từ Redis về DB
-            final_results = await self.sync_final_results(db, redis, room_code, room.id)
-            await db.commit()
-            
-            await redis.hset(f"game:state:{room_code}", "status", "finished")
-            
-            await publish_room_event(room_code, {
-                "type": "GAME_OVER",
-                "payload": {"leaderboard": final_results[:10]}
-            })
+        curr_q_idx = int(state.get("current_question", 0))
+        # Gọi kết thúc câu hỏi ngay lập tức và chuyển câu luôn
+        await self.end_question(db, redis, room_code, curr_q_idx, immediate=True)
 
     async def sync_final_results(self, db: AsyncSession, redis: Redis, room_code: str, session_id: uuid.UUID) -> list[dict]:
         """Đồng bộ điểm và xếp hạng từ Redis về PostgreSQL."""
@@ -280,6 +340,12 @@ class GameService:
         # 4. Lưu vết đã trả lời vào Redis ngay lập tức
         await redis.sadd(answered_key, str(user_id))
         await redis.expire(answered_key, 300)
+
+        # 4b. Nếu tất cả người chơi đã trả lời, kết thúc câu hỏi sớm
+        active_count = await redis.scard(f"game:active:{room_code}")
+        answered_count = await redis.scard(answered_key)
+        if active_count and answered_count >= active_count:
+            await self.end_question(db, redis, room_code, int(curr_q_idx), immediate=False)
 
         # 5. Cập nhật Leaderboard trong Redis và DB
         from app.db.models.game import GameParticipant, PlayerAnswer

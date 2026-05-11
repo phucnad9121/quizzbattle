@@ -36,10 +36,15 @@ export const useWebSocket = (roomCode: string | null) => {
 
 	const closeSocket = useCallback(() => {
 		if (wsRef.current) {
+			wsRef.current.onopen = null;
+			wsRef.current.onmessage = null;
+			wsRef.current.onerror = null;
+			wsRef.current.onclose = null;
 			wsRef.current.close();
 			wsRef.current = null;
 		}
 	}, []);
+
 
 	const scheduleReconnect = useCallback(() => {
 		if (manualCloseRef.current) {
@@ -55,9 +60,11 @@ export const useWebSocket = (roomCode: string | null) => {
 
 		clearReconnectTimer();
 		reconnectTimerRef.current = setTimeout(() => {
-			connect();
+			connectRef.current();
 		}, delay);
 	}, []);
+
+	const connectRef = useRef<() => void>(() => {});
 
 	const connect = useCallback(() => {
 		if (!roomCode || !accessToken) {
@@ -109,7 +116,12 @@ export const useWebSocket = (roomCode: string | null) => {
 			}
 			scheduleReconnect();
 		};
-	}, [accessToken, closeSocket, roomCode, scheduleReconnect]);
+	}, [accessToken, roomCode, scheduleReconnect]);
+
+	// Store latest connect in ref to avoid circular dependency
+	useEffect(() => {
+		connectRef.current = connect;
+	}, [connect]);
 
 	useEffect(() => {
 		if (!roomCode || !accessToken) {
@@ -124,14 +136,21 @@ export const useWebSocket = (roomCode: string | null) => {
 			clearReconnectTimer();
 			closeSocket();
 		};
-	}, [accessToken, closeSocket, connect, roomCode]);
+	}, [roomCode, accessToken]);
 
 	const sendMessage = useCallback(
-		(type: string, payload?: Record<string, unknown>) => {
+		(typeOrMessage: string | { type: string; payload?: any }, payload?: Record<string, unknown>) => {
 			if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
 				return;
 			}
-			const message: WsMessage = payload ? { type, payload } : { type };
+			
+			let message: any;
+			if (typeof typeOrMessage === "string") {
+				message = payload ? { type: typeOrMessage, payload } : { type: typeOrMessage };
+			} else {
+				message = typeOrMessage;
+			}
+			
 			wsRef.current.send(JSON.stringify(message));
 		},
 		[]

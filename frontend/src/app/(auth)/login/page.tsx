@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -11,16 +11,23 @@ export default function LoginPage() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isMounted && !isLoading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, isMounted]);
 
-  if (isLoading || isAuthenticated) {
+  if (!isMounted || isLoading || isAuthenticated) {
     return null;
   }
+
+
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">

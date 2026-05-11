@@ -8,6 +8,7 @@ import type {
 	Participant,
 	PlayerJoinedPayload,
 	PlayerLeftPayload,
+	QuestionEndPayload,
 	QuestionStartPayload,
 	RoomStatePayload,
 } from "@/types/game";
@@ -20,13 +21,16 @@ type GameState = {
 	timeLeft: number | null;
 	selectedOption: string | null;
 	answerResult: AnswerAckPayload | null;
+	questionEnd: QuestionEndPayload | null;
 	leaderboard: LeaderboardEntry[];
 	finalResults: FinalResults | null;
+	hostId: string | null;
 	setRoomState: (payload: RoomStatePayload) => void;
 	setQuestion: (payload: QuestionStartPayload) => void;
 	setTimeLeft: (seconds: number | null) => void;
 	selectOption: (optionId: string | null) => void;
 	setAnswerResult: (payload: AnswerAckPayload | null) => void;
+	setQuestionEnd: (payload: QuestionEndPayload | null) => void;
 	updateLeaderboard: (entries: LeaderboardEntry[]) => void;
 	setGameOver: (payload: GameOverPayload) => void;
 	handlePlayerJoined: (payload: PlayerJoinedPayload) => void;
@@ -42,8 +46,10 @@ const initialState = {
 	timeLeft: null,
 	selectedOption: null,
 	answerResult: null,
+	questionEnd: null,
 	leaderboard: [],
 	finalResults: null,
+	hostId: null,
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -52,6 +58,7 @@ export const useGameStore = create<GameState>((set) => ({
 		set(() => ({
 			roomCode: payload.room_code,
 			status: payload.status,
+			hostId: payload.host_id,
 			players: payload.participants,
 		})),
 	setQuestion: (payload) =>
@@ -60,10 +67,12 @@ export const useGameStore = create<GameState>((set) => ({
 			status: "in_progress",
 			selectedOption: null,
 			answerResult: null,
+			questionEnd: null,
 		})),
 	setTimeLeft: (seconds) => set(() => ({ timeLeft: seconds })),
 	selectOption: (optionId) => set(() => ({ selectedOption: optionId })),
 	setAnswerResult: (payload) => set(() => ({ answerResult: payload })),
+	setQuestionEnd: (payload) => set(() => ({ questionEnd: payload })),
 	updateLeaderboard: (entries) => set(() => ({ leaderboard: entries })),
 	setGameOver: (payload) =>
 		set(() => ({

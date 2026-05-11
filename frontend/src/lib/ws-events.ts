@@ -16,22 +16,24 @@ const handlers: Record<string, (payload: unknown) => void> = {
 	PLAYER_JOINED: (payload) =>
 		useGameStore.getState().handlePlayerJoined(payload as PlayerJoinedPayload),
 	PLAYER_LEFT: (payload) =>
-		useGameStore.getState().setQuestion(payload as QuestionStartPayload),
+		useGameStore.getState().handlePlayerLeft(payload as PlayerLeftPayload),
 	QUESTION_START: (payload) =>
-		useGameStore.getState().setAnswerResult(payload as AnswerAckPayload),
+		useGameStore.getState().setQuestion(payload as QuestionStartPayload),
 	ANSWER_ACK: (payload) =>
+		useGameStore.getState().setAnswerResult(payload as AnswerAckPayload),
+	QUESTION_END: (payload) => {
 		const data = payload as QuestionEndPayload;
+		useGameStore.getState().setQuestionEnd(data);
 		useGameStore.getState().updateLeaderboard(data.leaderboard);
-	QUESTION_END: (payload) =>
-		useGameStore.getState().handleQuestionEnd(payload as QuestionEndPayload),
+	},
+	GAME_OVER: (payload) =>
 		useGameStore.getState().setGameOver(payload as GameOverPayload),
-		useGameStore.getState().handleGameOver(payload as GameOverPayload),
 	ERROR: (payload) => {
 		const message =
 			typeof payload === "object" && payload && "message" in payload
 				? String((payload as { message: string }).message)
+				: "Đã có lỗi xảy ra";
 		useGameStore.getState().setAnswerResult({ error: message });
-		useGameStore.getState().handleError(message);
 	},
 };
 

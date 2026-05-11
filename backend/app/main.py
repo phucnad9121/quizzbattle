@@ -1,9 +1,20 @@
 # backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 from app.api.v1.router import api_router
+from app.core.config import settings
+
+
+def _parse_allowed_origins() -> list[str]:
+    origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
+    # Add 127.0.0.1 if localhost is present
+    extra_origins = []
+    for o in origins:
+        if "localhost" in o:
+            extra_origins.append(o.replace("localhost", "127.0.0.1"))
+    return [origin for origin in (origins + extra_origins) if origin]
+
 
 app = FastAPI(
     title="QuizBattle API",
@@ -14,7 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=_parse_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -9,6 +9,7 @@ export type Participant = {
 export type RoomStatePayload = {
 	room_code: string;
 	status: string;
+	host_id: string;
 	is_latejoiner: boolean;
 	participants: Participant[];
 };
@@ -57,6 +58,7 @@ export type QuestionEndPayload = {
 	question_idx: number;
 	correct_option_id: string | null;
 	correct_option_text: string;
+	wait_time?: number;
 	leaderboard: LeaderboardEntry[];
 };
 

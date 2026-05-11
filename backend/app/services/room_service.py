@@ -2,10 +2,11 @@
 import secrets
 import string
 import uuid
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from redis.asyncio import Redis
-from app.db.models.game import GameSession
+from app.db.models.game import GameSession, GameParticipant
 
 class RoomService:
     def generate_room_code(self, length: int = 6) -> str:
@@ -73,5 +74,67 @@ class RoomService:
         await redis.expire(state_key, 7200)
         
         return session
+
+    async def _build_room_state_payload(
+        self,
+        db: AsyncSession,
+        redis: Redis,
+        room: GameSession,
+    ) -> dict:
+        active_key = f"game:active:{room.room_code}"
+        active_ids = await redis.smembers(active_key)
+        participants: list[dict] = []
+
+        if active_ids:
+            active_uuid_list = [uuid.UUID(user_id) for user_id in active_ids]
+            result = await db.execute(
+                select(GameParticipant)
+                .where(
+                    GameParticipant.session_id == room.id,
+                    GameParticipant.user_id.in_(active_uuid_list),
+                )
+                .order_by(GameParticipant.joined_at.asc())
+            )
+            participants = [
+                {
+                    "user_id": str(participant.user_id),
+                    "display_name": participant.display_name,
+                    "score": participant.total_score,
+                }
+                for participant in result.scalars().all()
+            ]
+
+        return {
+            "type": "ROOM_STATE",
+            "payload": {
+                "room_code": room.room_code,
+                "status": room.status,
+                "host_id": str(room.host_id),
+                "is_latejoiner": room.status == "in_progress",
+                "participants": participants,
+            },
+        }
+
+    async def handle_player_leave(
+        self,
+        db: AsyncSession,
+        redis: Redis,
+        room_code: str,
+        leaving_user_id: uuid.UUID,
+    ) -> dict | None:
+        room = await db.scalar(
+            select(GameSession).where(GameSession.room_code == room_code.upper())
+        )
+        if not room:
+            return None
+
+        state_key = f"game:state:{room.room_code}"
+        active_key = f"game:active:{room.room_code}"
+        await redis.srem(active_key, str(leaving_user_id))
+
+        # Chỉ cập nhật trạng thái "active" trong Redis. 
+        # Không tự động chuyển Host hoặc kết thúc game khi ngắt kết nối tạm thời (chuyển trang).
+        # Game sẽ kết thúc khi hết câu hỏi hoặc Host chủ động đóng phòng.
+        return await self._build_room_state_payload(db, redis, room)
 
 room_service = RoomService()

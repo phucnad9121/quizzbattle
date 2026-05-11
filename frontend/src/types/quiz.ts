@@ -1,9 +1,10 @@
 export interface OptionResponse {
   id: string;
   option_text: string;
-  order_index: int;
+  order_index: number;
   is_correct?: boolean;
 }
+
 
 export interface QuestionResponse {
   id: string;

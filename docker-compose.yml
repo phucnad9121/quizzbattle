@@ -73,6 +73,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_WS_URL: ws://localhost:8000
+      NEXT_DISABLE_TURBOPACK: "1"
     ports:
       - "3000:3000"
     depends_on:

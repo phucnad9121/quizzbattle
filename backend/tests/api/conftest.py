@@ -15,11 +15,11 @@ from app.db.models import User, Quiz, Question, AnswerOption, RefreshToken
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://quizbattle:secret@postgres:5432/quizbattle_test",
+    "postgresql+asyncpg://quizbattle:secret@localhost:5432/quizbattle_test",
 )
 TEST_DATABASE_ADMIN_URL = os.getenv(
     "TEST_DATABASE_ADMIN_URL",
-    "postgresql+asyncpg://quizbattle:secret@postgres:5432/postgres",
+    "postgresql+asyncpg://quizbattle:secret@localhost:5432/postgres",
 )
 
 from sqlalchemy.pool import NullPool
