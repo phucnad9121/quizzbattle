@@ -23,11 +23,11 @@ export default function GamePage() {
   const roomCode = params.roomCode as string;
   const router = useRouter();
   const { user } = useAuthStore();
-  const { 
-    currentQuestion, 
-    status, 
-    selectedOption, 
-    selectOption, 
+  const {
+    currentQuestion,
+    status,
+    selectedOption,
+    selectOption,
     answerResult,
     questionEnd,
     leaderboard,
@@ -35,7 +35,7 @@ export default function GamePage() {
     hostId,
     quizId
   } = useGameStore();
-  
+
   const { sendMessage } = useWebSocket(roomCode);
   const [transitionCountdown, setTransitionCountdown] = useState<number | null>(null);
   const [showResultOverlay, setShowResultOverlay] = useState(false);
@@ -63,7 +63,7 @@ export default function GamePage() {
     const waitTime = questionEnd?.wait_time ?? null;
     if (waitTime !== null) {
       setTransitionCountdown(waitTime);
-      
+
       // QB-058 & QB-059: Timing for results and leaderboard
       setShowResultOverlay(true);
       setShowLeaderboard(false);
@@ -107,7 +107,7 @@ export default function GamePage() {
   useEffect(() => {
     if (status === "finished" && leaderboard.length > 0) {
       const myRank = leaderboard.findIndex(e => e.user_id === user?.id) + 1;
-      
+
       if (myRank > 0 && myRank <= 3) {
         playSound("gameOver");
         const duration = 5 * 1000;
@@ -116,7 +116,7 @@ export default function GamePage() {
 
         const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-        const interval: any = setInterval(function() {
+        const interval: any = setInterval(function () {
           const timeLeft = animationEnd - Date.now();
 
           if (timeLeft <= 0) {
@@ -127,7 +127,7 @@ export default function GamePage() {
           confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
           confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
         }, 250);
-        
+
         return () => clearInterval(interval);
       }
     }
@@ -135,7 +135,7 @@ export default function GamePage() {
 
   const handleSelectOption = (optionId: string) => {
     if (selectedOption || answerResult) return;
-    
+
     selectOption(optionId);
     sendMessage({
       type: "SUBMIT_ANSWER",
@@ -185,18 +185,18 @@ export default function GamePage() {
         <div className="relative z-10 max-w-4xl mx-auto space-y-12 py-12">
           <div className="text-center space-y-4">
             <div className="inline-block px-4 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full mb-4">
-               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500">Match Finished</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500">Match Finished</span>
             </div>
             <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
               KẾT THÚC
             </h1>
           </div>
 
-          
+
           <Leaderboard entries={leaderboard} highlightUserId={user?.id} isFull />
           <div className="flex flex-col md:flex-row justify-center items-center gap-6 pt-8">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               variant="outline"
               onClick={() => {
                 resetGame();
@@ -207,8 +207,8 @@ export default function GamePage() {
               Dashboard
             </Button>
 
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               variant="secondary"
               onClick={() => {
                 router.push(`/results/${roomCode}`);
@@ -217,9 +217,9 @@ export default function GamePage() {
             >
               Xem chi tiết
             </Button>
-            
+
             {isHost && (
-              <Button 
+              <Button
                 size="lg"
                 disabled={isRestarting}
                 onClick={async () => {
@@ -263,8 +263,8 @@ export default function GamePage() {
       <div className="relative z-20 flex items-center justify-between p-4 md:p-8 bg-black/20 backdrop-blur-md border-b border-white/5">
         {/* Left: Exit */}
         <div className="flex-shrink-0">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={handleLeave}
             className="bg-white/5 hover:bg-white/10 text-white rounded-2xl px-4 py-6 border border-white/10 transition-all group"
           >
@@ -276,7 +276,7 @@ export default function GamePage() {
         {/* Center: Countdown & Question Progress */}
         <div className="flex-1 max-w-4xl mx-auto flex items-center justify-center gap-6 px-4">
           <div className="flex items-center gap-3 shrink-0 py-2 px-4 bg-white/5 rounded-2xl border border-white/5">
-            <button 
+            <button
               onClick={() => playSound('correct')}
               className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-lg font-black italic shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform"
               title="Test Sound"
@@ -300,9 +300,9 @@ export default function GamePage() {
                 </span>
               </div>
             ) : (
-              <CountdownTimer 
+              <CountdownTimer
                 key={currentQuestion?.question_id}
-                totalSeconds={currentQuestion?.time_limit_secs || 20} 
+                totalSeconds={currentQuestion?.time_limit_secs || 20}
                 className="shadow-none bg-transparent border-none p-0 max-w-none"
               />
             )}
@@ -316,11 +316,10 @@ export default function GamePage() {
               variant="ghost"
               size="icon"
               onClick={toggleMute}
-              className={`w-12 h-12 rounded-2xl border transition-all ${
-                isMuted 
-                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
-                  : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-              }`}
+              className={`w-12 h-12 rounded-2xl border transition-all ${isMuted
+                ? 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                }`}
             >
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </Button>
@@ -347,7 +346,7 @@ export default function GamePage() {
       {/* Question & Answers Area or Leaderboard */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-6xl mx-auto w-full gap-12 py-8">
         {showLeaderboard ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full"
@@ -356,13 +355,13 @@ export default function GamePage() {
           </motion.div>
         ) : currentQuestion ? (
           <>
-            <QuestionDisplay 
+            <QuestionDisplay
               questionText={currentQuestion.question_text}
               currentIndex={currentQuestion.question_idx ?? 0}
               totalQuestions={currentQuestion.total_questions || 0}
             />
-            
-            <AnswerButtons 
+
+            <AnswerButtons
               options={currentQuestion.options}
               selectedId={selectedOption}
               correctId={questionEnd?.correct_option_id || (answerResult?.is_correct ? selectedOption : null)}
@@ -375,7 +374,7 @@ export default function GamePage() {
       </div>
 
       {/* Result Overlay */}
-      <ResultOverlay 
+      <ResultOverlay
         isVisible={showResultOverlay}
         isCorrect={answerResult?.is_correct || false}
         scoreEarned={answerResult?.score_earned || 0}
@@ -385,21 +384,21 @@ export default function GamePage() {
 
       {/* Footer Stats (Sticky Mobile) */}
       <div className="relative z-10 mt-auto md:mt-0 flex justify-center w-full pb-8">
-         <div className="flex items-center gap-8 px-8 py-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl">
-            <div className="flex flex-col items-center">
-               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Điểm số</span>
-               <span className="text-2xl font-black text-indigo-400">
-                 {leaderboard.find(e => e.user_id === user?.id)?.score || 0}
-               </span>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="flex flex-col items-center">
-               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Hạng</span>
-               <span className="text-2xl font-black text-white italic">
-                 #{(leaderboard.findIndex(e => e.user_id === user?.id) + 1) || '-'}
-               </span>
-            </div>
-         </div>
+        <div className="flex items-center gap-8 px-8 py-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Điểm số</span>
+            <span className="text-2xl font-black text-indigo-400">
+              {leaderboard.find(e => e.user_id === user?.id)?.score || 0}
+            </span>
+          </div>
+          <div className="w-px h-8 bg-white/10" />
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Hạng</span>
+            <span className="text-2xl font-black text-white italic">
+              #{(leaderboard.findIndex(e => e.user_id === user?.id) + 1) || '-'}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

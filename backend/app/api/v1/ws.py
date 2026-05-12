@@ -77,6 +77,15 @@ async def websocket_endpoint(
         active_key = f"game:active:{room_code.upper()}"
         await redis.sadd(active_key, str(current_user.id))
 
+        # Khởi tạo điểm 0 và lưu tên vào bảng ánh xạ
+        user_id_str = str(current_user.id)
+        room_code_upper = room_code.upper()
+        
+        # 1. Điểm số (ZSET) - Chỉ dùng ID
+        await redis.zincrby(f"game:leaderboard:{room_code_upper}", 0, user_id_str)
+        # 2. Bảng tên (HASH) - Ánh xạ ID -> Name
+        await redis.hset(f"game:names:{room_code_upper}", user_id_str, participant.display_name)
+
         # 3. Gửi ROOM_STATE ban đầu cho client vừa kết nối
         room_state = await room_service._build_room_state_payload(db, redis, room)
         await ws.send_json(room_state)

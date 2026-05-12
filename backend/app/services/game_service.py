@@ -1,6 +1,7 @@
 # app/services/game_service.py
 import time
 import uuid
+import asyncio
 from datetime import datetime
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,15 +19,14 @@ class GameService:
         room_code: str, 
         user_id: uuid.UUID
     ):
-        """Bắt đầu trò chơi và kích hoạt timer cho câu hỏi đầu tiên."""
-        stmt = select(GameSession).where(GameSession.room_code == room_code.upper())
+        room_code_upper = room_code.upper()
+        stmt = select(GameSession).where(GameSession.room_code == room_code_upper)
         res = await db.execute(stmt)
         room = res.scalar_one_or_none()
         
         if not room or room.host_id != user_id or room.status != "waiting":
             return
 
-        # Lấy câu hỏi đầu tiên
         stmt_questions = (
             select(Question)
             .where(Question.quiz_id == room.quiz_id)
@@ -39,14 +39,12 @@ class GameService:
         if not questions:
             return
 
-        # Cập nhật trạng thái
         room.status = "in_progress"
         room.current_question_idx = 0
         room.started_at = datetime.utcnow()
         await db.commit()
 
-        # Cập nhật Redis
-        state_key = f"game:state:{room_code}"
+        state_key = f"game:state:{room_code_upper}"
         await redis.hset(state_key, mapping={
             "session_id": str(room.id),
             "host_id": str(room.host_id),
@@ -56,15 +54,11 @@ class GameService:
             "total_questions": str(len(questions))
         })
 
-        # Gửi câu hỏi đầu tiên
-        await self._publish_question(room_code, questions[0], 0, len(questions))
-        
-        # Kích hoạt timer (chỉ chạy trên worker của host)
-        import asyncio
-        asyncio.create_task(self.question_timer(room_code, 0, questions[0].time_limit_secs))
+        await self._publish_question(room_code_upper, questions[0], 0, len(questions))
+        asyncio.create_task(self.question_timer(room_code_upper, 0, questions[0].time_limit_secs))
 
     async def _publish_question(self, room_code: str, question: Question, idx: int, total: int):
-        await publish_room_event(room_code, {
+        await publish_room_event(room_code.upper(), {
             "type": "QUESTION_START",
             "payload": {
                 "quiz_id": str(question.quiz_id),
@@ -80,46 +74,37 @@ class GameService:
         })
 
     async def question_timer(self, room_code: str, question_idx: int, time_limit: int):
-        """Đợi hết giờ hoặc cho đến khi tất cả đã trả lời."""
-        import asyncio
-        from app.infrastructure.redis_client import get_redis
-        from app.db.session import AsyncSessionLocal
-
-        # Đợi time_limit giây
-        # Trong thực tế, ta có thể dùng loop ngắn để check sớm nếu tất cả đã trả lời
+        room_code_upper = room_code.upper()
         remaining = time_limit
-        r = await get_redis()
-        state_key = f"game:state:{room_code}"
-        
-        end_key = f"game:ended:{room_code}:{question_idx}"
+        r = await self._get_redis_safe()
+        state_key = f"game:state:{room_code_upper}"
+        end_key = f"game:ended:{room_code_upper}:{question_idx}"
 
         while remaining > 0:
             await asyncio.sleep(1)
             remaining -= 1
-            # Check sớm: Nếu số câu trả lời trong Redis == số participants
-            # (Logic này sẽ được hoàn thiện ở task SUBMIT_ANSWER)
-            
-            # Kiểm tra xem có bị stale không (ví dụ game đã kết thúc hoặc nhảy câu tiếp)
             curr = await r.hget(state_key, "current_question")
             if curr != str(question_idx):
                 return
-
-            # Nếu câu hỏi đã kết thúc sớm thì dừng timer
             if await r.exists(end_key):
                 return
 
-        # Hết giờ -> Kết thúc câu hỏi (không chuyển ngay, đợi xem kết quả)
+        from app.db.session import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
-            await self.end_question(db, r, room_code, question_idx, immediate=False)
+            await self.end_question(db, r, room_code_upper, question_idx, immediate=False)
+
+    async def _get_redis_safe(self):
+        from app.infrastructure.redis_client import get_redis
+        return await get_redis()
 
     async def end_question(self, db: AsyncSession, redis: Redis, room_code: str, question_idx: int, immediate: bool = False):
-        """Kết thúc câu hỏi hiện tại, show đáp án và chuẩn bị câu tiếp."""
-        end_key = f"game:ended:{room_code}:{question_idx}"
+        room_code_upper = room_code.upper()
+        end_key = f"game:ended:{room_code_upper}:{question_idx}"
+        
         if not await redis.set(end_key, "1", ex=300, nx=True):
             return
 
-        # 1. Lấy thông tin phòng và câu hỏi hiện tại
-        stmt = select(GameSession).where(GameSession.room_code == room_code.upper())
+        stmt = select(GameSession).where(GameSession.room_code == room_code_upper)
         res = await db.execute(stmt)
         room = res.scalar_one_or_none()
         if not room: return
@@ -133,39 +118,33 @@ class GameService:
         question = res_q.scalar_one_or_none()
         if not question: return
 
-        # 2. Tìm đáp án đúng
         correct_option = next((o for o in question.options if o.is_correct), None)
         
-        # 3. Lấy Leaderboard hiện tại
-        leaderboard = await self.get_leaderboard(redis, room_code)
+        # Lấy Leaderboard mới nhất
+        leaderboard = await self.get_leaderboard(redis, room_code_upper)
 
-        # 4. Thông báo QUESTION_END ngay lập tức để giải phóng WebSocket
-        await publish_room_event(room_code, {
+        await publish_room_event(room_code_upper, {
             "type": "QUESTION_END",
             "payload": {
                 "question_idx": question_idx,
                 "correct_option_id": str(correct_option.id) if correct_option else None,
                 "correct_option_text": correct_option.option_text if correct_option else "",
                 "wait_time": 0 if immediate else 5,
-                "leaderboard": leaderboard[:5]
+                "leaderboard": leaderboard[:10]
             }
         })
 
-        # 5. Xử lý chuyển câu trong một task riêng để không block loop
         async def transition_task():
             if not immediate:
                 await asyncio.sleep(5)
             
-            # Re-fetch room in new session for safety
             from app.db.session import AsyncSessionLocal
             async with AsyncSessionLocal() as db_task:
-                # Kiểm tra lại xem có bị skip nhanh trong lúc đang sleep không
-                stmt_n = select(GameSession).where(GameSession.room_code == room_code.upper())
+                stmt_n = select(GameSession).where(GameSession.room_code == room_code_upper)
                 res_n = await db_task.execute(stmt_n)
                 r_task = res_n.scalar_one_or_none()
                 if not r_task: return
 
-                # Kiểm tra xem còn câu tiếp theo không
                 stmt_next = select(Question).where(
                     Question.quiz_id == r_task.quiz_id, 
                     Question.order_index == question_idx + 1
@@ -174,50 +153,26 @@ class GameService:
                 next_q = res_next.scalar_one_or_none()
 
                 if next_q:
-                    # Chuyển sang câu tiếp
                     r_task.current_question_idx = question_idx + 1
                     await db_task.commit()
-
-                    total_questions = int((await redis.hget(f"game:state:{room_code}", "total_questions")) or 0)
-                    if total_questions <= 0:
-                        total_questions = question_idx + 2
-
-                    # Cập nhật Redis state
-                    await redis.hset(f"game:state:{room_code}", mapping={
+                    
+                    total_questions = int((await redis.hget(f"game:state:{room_code_upper}", "total_questions")) or 0)
+                    await redis.hset(f"game:state:{room_code_upper}", mapping={
                         "current_question": str(question_idx + 1),
                         "question_start_ts": str(time.time())
                     })
                     
-                    # Khởi tạo timer cho câu mới
-                    asyncio.create_task(self.question_timer(room_code, question_idx + 1, next_q.time_limit_secs))
-                    
-                    # Gửi thông báo bắt đầu câu mới
-                    await publish_room_event(room_code, {
-                        "type": "QUESTION_START",
-                        "payload": {
-                            "quiz_id": str(next_q.quiz_id),
-                            "question_id": str(next_q.id),
-                            "question_text": next_q.question_text,
-                            "question_idx": question_idx + 1,
-                            "total_questions": total_questions,
-                            "time_limit_secs": next_q.time_limit_secs,
-                            "options": [
-                                {"id": str(o.id), "option_text": o.option_text} 
-                                for o in next_q.options
-                            ]
-                        }
-                    })
+                    asyncio.create_task(self.question_timer(room_code_upper, question_idx + 1, next_q.time_limit_secs))
+                    await self._publish_question(room_code_upper, next_q, question_idx + 1, total_questions)
                 else:
-                    # Hết câu hỏi -> GAME_OVER
                     r_task.status = "finished"
                     r_task.finished_at = datetime.utcnow()
                     await db_task.commit()
                     
-                    await redis.hset(f"game:state:{room_code}", "status", "finished")
+                    await redis.hset(f"game:state:{room_code_upper}", "status", "finished")
+                    final_results = await self.sync_final_results(db_task, redis, room_code_upper, r_task.id)
                     
-                    final_results = await self.sync_final_results(db_task, redis, room_code, r_task.id)
-                    
-                    await publish_room_event(room_code, {
+                    await publish_room_event(room_code_upper, {
                         "type": "GAME_OVER",
                         "payload": {
                             "quiz_id": str(r_task.quiz_id),
@@ -225,34 +180,30 @@ class GameService:
                         }
                     })
 
-        import asyncio
         asyncio.create_task(transition_task())
 
     async def skip_question(self, db: AsyncSession, redis: Redis, room_code: str, user_id: uuid.UUID):
-        """Cho phép host bỏ qua câu hỏi hiện tại."""
-        state_key = f"game:state:{room_code}"
+        room_code_upper = room_code.upper()
+        state_key = f"game:state:{room_code_upper}"
         state = await redis.hgetall(state_key)
         
         if not state or state.get("status") != "in_progress":
             return
             
         if state.get("host_id") != str(user_id):
-            return # Chỉ host mới có quyền
+            return 
             
         curr_q_idx = int(state.get("current_question", 0))
-        # Gọi kết thúc câu hỏi ngay lập tức và chuyển câu luôn
-        await self.end_question(db, redis, room_code, curr_q_idx, immediate=True)
+        await self.end_question(db, redis, room_code_upper, curr_q_idx, immediate=True)
 
     async def sync_final_results(self, db: AsyncSession, redis: Redis, room_code: str, session_id: uuid.UUID) -> list[dict]:
-        """Đồng bộ điểm và xếp hạng từ Redis về PostgreSQL."""
+        room_code_upper = room_code.upper()
         from sqlalchemy import update
         from app.db.models.game import GameParticipant
         
-        leaderboard = await self.get_leaderboard(redis, room_code)
-        
+        leaderboard = await self.get_leaderboard(redis, room_code_upper)
         for entry in leaderboard:
             try:
-                # Thử tìm theo user_id nếu có
                 user_id_str = entry.get("user_id")
                 if user_id_str and user_id_str != "None":
                     stmt = (
@@ -264,37 +215,39 @@ class GameService:
                         .values(total_score=entry["score"], rank=entry["rank"])
                     )
                     await db.execute(stmt)
-                else:
-                    # Nếu là khách, tìm theo display_name trong session này
-                    stmt = (
-                        update(GameParticipant)
-                        .where(
-                            GameParticipant.session_id == session_id,
-                            GameParticipant.display_name == entry["display_name"]
-                        )
-                        .values(total_score=entry["score"], rank=entry["rank"])
-                    )
-                    await db.execute(stmt)
             except Exception as e:
                 print(f"Error syncing result for {entry.get('display_name')}: {e}")
-                continue
         
         await db.commit()
         return leaderboard
 
     async def get_leaderboard(self, redis: Redis, room_code: str) -> list[dict]:
-        # Lấy top 50, thứ tự giảm dần
+        room_code_upper = room_code.upper()
+        # Lấy điểm từ ZSET (Chỉ chứa user_id)
         entries = await redis.zrevrange(
-            f"game:leaderboard:{room_code}", 0, 49, withscores=True
+            f"game:leaderboard:{room_code_upper}", 0, 49, withscores=True
         )
+        
+        # Lấy tên từ HASH bảng ánh xạ
+        names_map = await redis.hgetall(f"game:names:{room_code_upper}")
+        
         results = []
-        for i, (m, s) in enumerate(entries):
-            parts = m.split(":")
+        for i, (user_id_raw, score_raw) in enumerate(entries):
+            # Xử lý ID (có thể là bytes hoặc str)
+            user_id_str = user_id_raw.decode() if isinstance(user_id_raw, bytes) else str(user_id_raw)
+            
+            # Xử lý Tên (lấy từ names_map)
+            display_name_raw = names_map.get(user_id_raw) or names_map.get(user_id_str)
+            if display_name_raw:
+                display_name = display_name_raw.decode() if isinstance(display_name_raw, bytes) else str(display_name_raw)
+            else:
+                display_name = user_id_str # Fallback nếu không tìm thấy tên
+                
             results.append({
-                "rank": i+1, 
-                "user_id": parts[0] if len(parts) > 1 else None,
-                "display_name": parts[1] if len(parts) > 1 else parts[0],
-                "score": int(s)
+                "rank": i + 1, 
+                "user_id": user_id_str,
+                "display_name": display_name,
+                "score": int(float(score_raw))
             })
         return results
 
@@ -302,14 +255,18 @@ class GameService:
         self, 
         redis: Redis, 
         room_code: str, 
-        user_id: uuid.UUID | str | None,
+        user_id: uuid.UUID | str,
         display_name: str, 
         score_earned: int
     ):
-        # Đảm bảo member key luôn có định dạng ID:Name
-        id_str = str(user_id) if user_id else "guest"
-        member = f"{id_str}:{display_name}"
-        await redis.zincrby(f"game:leaderboard:{room_code}", score_earned, member)
+        room_code_upper = room_code.upper()
+        user_id_str = str(user_id)
+        
+        # 1. Cập nhật điểm trong ZSET
+        await redis.zincrby(f"game:leaderboard:{room_code_upper}", score_earned, user_id_str)
+        
+        # 2. Cập nhật/Đảm bảo tên trong HASH mapping
+        await redis.hset(f"game:names:{room_code_upper}", user_id_str, display_name)
 
     async def process_answer(
         self, 
@@ -320,61 +277,41 @@ class GameService:
         question_id: uuid.UUID, 
         selected_option_id: uuid.UUID
     ) -> dict:
-        """
-        Xử lý đáp án từ người chơi:
-        1. Kiểm tra thời gian và trạng thái câu hỏi.
-        2. Tính điểm dựa trên tính đúng đắn và tốc độ.
-        3. Cập nhật Leaderboard Redis và lưu PlayerAnswer vào DB.
-        """
-        state_key = f"game:state:{room_code}"
+        room_code_upper = room_code.upper()
+        state_key = f"game:state:{room_code_upper}"
         state = await redis.hgetall(state_key)
         
         if not state or state.get("status") != "in_progress":
             return {"error": "Trò chơi chưa bắt đầu hoặc đã kết thúc"}
 
-        # 1. Kiểm tra đã trả lời chưa
         curr_q_idx = state.get("current_question")
-        answered_key = f"game:answered:{room_code}:{curr_q_idx}"
+        answered_key = f"game:answered:{room_code_upper}:{curr_q_idx}"
         if await redis.sismember(answered_key, str(user_id)):
             return {"error": "Bạn đã trả lời câu hỏi này rồi"}
 
-        # 2. Tính thời gian trả lời thực tế (ms)
         start_ts = float(state.get("question_start_ts", 0))
-        now_ts = time.time()
-        answer_time_ms = int((now_ts - start_ts) * 1000)
+        answer_time_ms = int((time.time() - start_ts) * 1000)
 
-        # 3. Lấy thông tin câu hỏi và đáp án
         stmt_q = select(Question).where(Question.id == question_id).options(selectinload(Question.options))
         res_q = await db.execute(stmt_q)
         question = res_q.scalar_one_or_none()
-        if not question:
-            return {"error": "Câu hỏi không tồn tại"}
+        if not question: return {"error": "Câu hỏi không tồn tại"}
 
         time_limit_ms = question.time_limit_secs * 1000
         is_correct = False
         score_earned = 0
 
-        # Nếu còn trong thời gian cho phép (buffer 500ms cho network latency)
-        if answer_time_ms <= time_limit_ms + 500:
+        if answer_time_ms <= time_limit_ms + 1000:
             correct_opt = next((o for o in question.options if o.is_correct), None)
             is_correct = (str(correct_opt.id) == str(selected_option_id)) if correct_opt else False
-            
             if is_correct:
-                # Công thức: score = base_points * max(0.5, 1 - (answer_time_ms / time_limit_ms) * 0.5)
                 multiplier = max(0.5, 1 - (min(answer_time_ms, time_limit_ms) / time_limit_ms) * 0.5)
                 score_earned = int(question.points * multiplier)
 
-        # 4. Lưu vết đã trả lời vào Redis ngay lập tức
+        # Lưu vết đã trả lời
         await redis.sadd(answered_key, str(user_id))
         await redis.expire(answered_key, 300)
 
-        # 4b. Nếu tất cả người chơi đã trả lời, kết thúc câu hỏi sớm
-        active_count = await redis.scard(f"game:active:{room_code}")
-        answered_count = await redis.scard(answered_key)
-        if active_count and answered_count >= active_count:
-            await self.end_question(db, redis, room_code, int(curr_q_idx), immediate=False)
-
-        # 5. Cập nhật Leaderboard trong Redis và DB
         from app.db.models.game import GameParticipant, PlayerAnswer
         stmt_p = select(GameParticipant).where(
             GameParticipant.session_id == uuid.UUID(state.get("session_id")),
@@ -384,34 +321,40 @@ class GameService:
         participant = res_p.scalar_one_or_none()
         
         if participant:
-            # Cập nhật Redis ZSET
-            await self.record_answer(redis, room_code, user_id, participant.display_name, score_earned)
-            # Cập nhật DB Participant
+            # 1. CỘNG ĐIỂM VÀO REDIS TRƯỚC (Rất quan trọng!)
+            await self.record_answer(redis, room_code_upper, user_id, participant.display_name, score_earned)
+            
+            # 2. Cập nhật DB (Chạy song song hoặc sau đó)
             participant.total_score += score_earned
             await db.commit()
 
-            # 6. Lưu PlayerAnswer vào DB (async task)
+            # 3. Kiểm tra kết thúc sớm
+            active_count = await redis.scard(f"game:active:{room_code_upper}")
+            answered_count = await redis.scard(answered_key)
+            if active_count > 0 and answered_count >= active_count:
+                # Đợi một chút cực ngắn để đảm bảo Redis đã ghi xong (Optional nhưng an toàn)
+                await self.end_question(db, redis, room_code_upper, int(curr_q_idx), immediate=False)
+
+            # Lưu PlayerAnswer vào DB
             from app.db.session import AsyncSessionLocal
-            async def save_answer_task():
+            async def save_task():
                 async with AsyncSessionLocal() as d:
-                    ans = PlayerAnswer(
+                    d.add(PlayerAnswer(
                         participant_id=participant.id,
                         question_id=question_id,
                         selected_option=selected_option_id,
                         is_correct=is_correct,
                         score_earned=score_earned,
                         answer_time_ms=answer_time_ms
-                    )
-                    d.add(ans)
+                    ))
                     await d.commit()
-            
-            import asyncio
-            asyncio.create_task(save_answer_task())
+            asyncio.create_task(save_task())
 
         return {
             "is_correct": is_correct,
             "score_earned": score_earned,
-            "answer_time_ms": answer_time_ms
+            "answer_time_ms": answer_time_ms,
+            "correct_option_id": str(next((o.id for o in question.options if o.is_correct), ""))
         }
 
 game_service = GameService()
