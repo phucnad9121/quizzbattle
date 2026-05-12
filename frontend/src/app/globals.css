@@ -79,3 +79,13 @@ body {
   color: hsl(var(--foreground));
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+@layer utilities {
+  @keyframes bounce-short {
+    0%, 100% { transform: scale(1.05); }
+    50% { transform: scale(1.15); }
+  }
+  .animate-bounce-short {
+    animation: bounce-short 0.4s ease-in-out;
+  }
+}

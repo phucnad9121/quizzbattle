@@ -10,6 +10,7 @@ export type RoomStatePayload = {
 	room_code: string;
 	status: string;
 	host_id: string;
+	quiz_id: string;
 	is_latejoiner: boolean;
 	participants: Participant[];
 };
@@ -30,6 +31,7 @@ export type QuestionOption = {
 };
 
 export type QuestionStartPayload = {
+	quiz_id: string;
 	question_id: string;
 	question_idx: number;
 	total_questions: number;
@@ -63,6 +65,7 @@ export type QuestionEndPayload = {
 };
 
 export type GameOverPayload = {
+	quiz_id?: string;
 	leaderboard: LeaderboardEntry[];
 };
 

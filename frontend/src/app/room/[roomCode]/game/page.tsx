@@ -11,7 +11,9 @@ import Leaderboard from "@/components/game/Leaderboard";
 import ResultOverlay from "@/components/game/ResultOverlay";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
-import { Loader2, ArrowLeft, Zap } from "lucide-react";
+import { apiClient } from "@/lib/api";
+import { Loader2, ArrowLeft, Zap, RotateCcw } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function GamePage() {
   const params = useParams();
@@ -27,11 +29,15 @@ export default function GamePage() {
     questionEnd,
     leaderboard,
     resetGame,
-    hostId
+    hostId,
+    quizId
   } = useGameStore();
   
   const { sendMessage } = useWebSocket(roomCode);
   const [transitionCountdown, setTransitionCountdown] = useState<number | null>(null);
+  const [showResultOverlay, setShowResultOverlay] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   const isHost = user?.id === hostId;
 
@@ -45,12 +51,27 @@ export default function GamePage() {
     const waitTime = questionEnd?.wait_time ?? null;
     if (waitTime !== null) {
       setTransitionCountdown(waitTime);
+      
+      // QB-058 & QB-059: Timing for results and leaderboard
+      setShowResultOverlay(true);
+      setShowLeaderboard(false);
+
+      const resultTimer = setTimeout(() => {
+        setShowResultOverlay(false);
+        setShowLeaderboard(true);
+      }, 3000);
+
       const timer = setInterval(() => {
         setTransitionCountdown(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
       }, 1000);
-      return () => clearInterval(timer);
+      return () => {
+        clearInterval(timer);
+        clearTimeout(resultTimer);
+      };
     }
     setTransitionCountdown(null);
+    setShowResultOverlay(false);
+    setShowLeaderboard(false);
   }, [questionEnd]);
 
   const handleSelectOption = (optionId: string) => {
@@ -110,24 +131,47 @@ export default function GamePage() {
           </div>
 
           
-          <Leaderboard entries={leaderboard} highlightUserId={user?.id} />
-          
+          <Leaderboard entries={leaderboard} highlightUserId={user?.id} isFull />
           <div className="flex flex-col md:flex-row justify-center items-center gap-6 pt-8">
             <Button 
               size="lg" 
               variant="outline"
-              onClick={() => router.push("/dashboard")}
+              onClick={() => {
+                resetGame();
+                router.push("/dashboard");
+              }}
               className="h-16 px-12 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 text-white font-black text-lg transition-all uppercase italic"
             >
               Về Dashboard
             </Button>
-            <Button 
-              size="lg" 
-              onClick={handleLeave}
-              className="h-16 px-16 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg shadow-[0_20px_40px_rgba(79,70,229,0.4)] transition-all uppercase italic"
-            >
-              Thoát game
-            </Button>
+            
+            {isHost && (
+              <Button 
+                size="lg"
+                disabled={isRestarting}
+                onClick={async () => {
+                  if (!quizId) {
+                    console.error("Missing quizId for restart");
+                    return;
+                  }
+                  try {
+                    setIsRestarting(true);
+                    const response = await apiClient.post("/rooms", {
+                      quiz_id: quizId
+                    });
+                    resetGame();
+                    router.push(`/room/${response.data.room_code}/lobby`);
+                  } catch (err) {
+                    console.error("Failed to restart:", err);
+                    setIsRestarting(false);
+                  }
+                }}
+                className="h-16 px-16 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg shadow-[0_20px_40px_rgba(79,70,229,0.4)] transition-all hover:scale-105 active:scale-95 flex items-center gap-3 disabled:opacity-70"
+              >
+                {isRestarting ? <Loader2 className="animate-spin" size={20} /> : <RotateCcw size={20} />}
+                Chơi lại
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -182,7 +226,7 @@ export default function GamePage() {
         )}
 
         <div className="flex-1 max-md:order-3 max-w-md mx-auto h-14 flex items-center justify-center">
-          {answerResult ? (
+          {answerResult || questionEnd ? (
             <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-2 rounded-full flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
               <span className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">
@@ -208,36 +252,44 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* Question & Answers Area */}
+      {/* Question & Answers Area or Leaderboard */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-6xl mx-auto w-full gap-12 py-8">
-        {currentQuestion && (
+        {showLeaderboard ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full"
+          >
+            <Leaderboard entries={leaderboard} highlightUserId={user?.id} />
+          </motion.div>
+        ) : currentQuestion ? (
           <>
             <QuestionDisplay 
               questionText={currentQuestion.question_text}
+              currentIndex={currentQuestion.question_idx ?? 0}
+              totalQuestions={currentQuestion.total_questions || 0}
             />
             
             <AnswerButtons 
               options={currentQuestion.options}
               selectedId={selectedOption}
               correctId={questionEnd?.correct_option_id || (answerResult?.is_correct ? selectedOption : null)}
-              disabled={!!selectedOption || !!answerResult}
+              disabled={!!selectedOption || !!answerResult || !!questionEnd}
               answerResult={answerResult}
               onSelect={handleSelectOption}
             />
           </>
-        )}
+        ) : null}
       </div>
 
       {/* Result Overlay */}
-      {answerResult && (
-        <ResultOverlay 
-          isVisible={!!answerResult}
-          isCorrect={answerResult.is_correct || false}
-          scoreEarned={answerResult.score_earned || 0}
-          answerTimeMs={answerResult.answer_time_ms || 0}
-          correctAnswer={questionEnd?.correct_option_text}
-        />
-      )}
+      <ResultOverlay 
+        isVisible={showResultOverlay}
+        isCorrect={answerResult?.is_correct || false}
+        scoreEarned={answerResult?.score_earned || 0}
+        answerTimeMs={answerResult?.answer_time_ms || 0}
+        correctAnswer={questionEnd?.correct_option_text}
+      />
 
       {/* Footer Stats (Sticky Mobile) */}
       <div className="relative z-10 mt-auto md:mt-0 flex justify-center w-full pb-8">

@@ -67,6 +67,7 @@ class GameService:
         await publish_room_event(room_code, {
             "type": "QUESTION_START",
             "payload": {
+                "quiz_id": str(question.quiz_id),
                 "question_id": str(question.id),
                 "question_idx": idx,
                 "total_questions": total,
@@ -194,6 +195,7 @@ class GameService:
                     await publish_room_event(room_code, {
                         "type": "QUESTION_START",
                         "payload": {
+                            "quiz_id": str(next_q.quiz_id),
                             "question_id": str(next_q.id),
                             "question_text": next_q.question_text,
                             "question_idx": question_idx + 1,
@@ -217,7 +219,10 @@ class GameService:
                     
                     await publish_room_event(room_code, {
                         "type": "GAME_OVER",
-                        "payload": {"leaderboard": final_results[:10]}
+                        "payload": {
+                            "quiz_id": str(r_task.quiz_id),
+                            "leaderboard": final_results[:10]
+                        }
                     })
 
         import asyncio
@@ -246,16 +251,35 @@ class GameService:
         leaderboard = await self.get_leaderboard(redis, room_code)
         
         for entry in leaderboard:
-            stmt = (
-                update(GameParticipant)
-                .where(
-                    GameParticipant.session_id == session_id,
-                    GameParticipant.user_id == uuid.UUID(entry["user_id"])
-                )
-                .values(total_score=entry["score"], rank=entry["rank"])
-            )
-            await db.execute(stmt)
+            try:
+                # Thử tìm theo user_id nếu có
+                user_id_str = entry.get("user_id")
+                if user_id_str and user_id_str != "None":
+                    stmt = (
+                        update(GameParticipant)
+                        .where(
+                            GameParticipant.session_id == session_id,
+                            GameParticipant.user_id == uuid.UUID(user_id_str)
+                        )
+                        .values(total_score=entry["score"], rank=entry["rank"])
+                    )
+                    await db.execute(stmt)
+                else:
+                    # Nếu là khách, tìm theo display_name trong session này
+                    stmt = (
+                        update(GameParticipant)
+                        .where(
+                            GameParticipant.session_id == session_id,
+                            GameParticipant.display_name == entry["display_name"]
+                        )
+                        .values(total_score=entry["score"], rank=entry["rank"])
+                    )
+                    await db.execute(stmt)
+            except Exception as e:
+                print(f"Error syncing result for {entry.get('display_name')}: {e}")
+                continue
         
+        await db.commit()
         return leaderboard
 
     async def get_leaderboard(self, redis: Redis, room_code: str) -> list[dict]:
@@ -263,25 +287,28 @@ class GameService:
         entries = await redis.zrevrange(
             f"game:leaderboard:{room_code}", 0, 49, withscores=True
         )
-        return [
-            {
+        results = []
+        for i, (m, s) in enumerate(entries):
+            parts = m.split(":")
+            results.append({
                 "rank": i+1, 
-                "user_id": m.split(":")[0],
-                "display_name": m.split(":")[1],
+                "user_id": parts[0] if len(parts) > 1 else None,
+                "display_name": parts[1] if len(parts) > 1 else parts[0],
                 "score": int(s)
-            }
-            for i, (m, s) in enumerate(entries)
-        ]
+            })
+        return results
 
     async def record_answer(
         self, 
         redis: Redis, 
         room_code: str, 
-        user_id: uuid.UUID,
+        user_id: uuid.UUID | str | None,
         display_name: str, 
         score_earned: int
     ):
-        member = f"{user_id}:{display_name}"
+        # Đảm bảo member key luôn có định dạng ID:Name
+        id_str = str(user_id) if user_id else "guest"
+        member = f"{id_str}:{display_name}"
         await redis.zincrby(f"game:leaderboard:{room_code}", score_earned, member)
 
     async def process_answer(

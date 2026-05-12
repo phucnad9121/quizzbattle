@@ -24,6 +24,7 @@ type GameState = {
 	questionEnd: QuestionEndPayload | null;
 	leaderboard: LeaderboardEntry[];
 	finalResults: FinalResults | null;
+	quizId: string | null;
 	hostId: string | null;
 	setRoomState: (payload: RoomStatePayload) => void;
 	setQuestion: (payload: QuestionStartPayload) => void;
@@ -49,6 +50,7 @@ const initialState = {
 	questionEnd: null,
 	leaderboard: [],
 	finalResults: null,
+	quizId: null,
 	hostId: null,
 };
 
@@ -59,6 +61,7 @@ export const useGameStore = create<GameState>((set) => ({
 			roomCode: payload.room_code,
 			status: payload.status,
 			hostId: payload.host_id,
+			quizId: payload.quiz_id,
 			players: payload.participants,
 		})),
 	setQuestion: (payload) =>
@@ -68,6 +71,7 @@ export const useGameStore = create<GameState>((set) => ({
 			selectedOption: null,
 			answerResult: null,
 			questionEnd: null,
+			quizId: payload.quiz_id,
 		})),
 	setTimeLeft: (seconds) => set(() => ({ timeLeft: seconds })),
 	selectOption: (optionId) => set(() => ({ selectedOption: optionId })),
@@ -79,6 +83,7 @@ export const useGameStore = create<GameState>((set) => ({
 			status: "finished",
 			finalResults: payload.leaderboard,
 			leaderboard: payload.leaderboard,
+			quizId: payload.quiz_id || null,
 		})),
 	handlePlayerJoined: (payload) =>
 		set((state) => {

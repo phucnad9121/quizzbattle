@@ -97,6 +97,7 @@ async def websocket_endpoint(
                 await ws.send_json({
                     "type": "QUESTION_START",
                     "payload": {
+                        "quiz_id": str(room.quiz_id),
                         "question_id": str(current_question.id),
                         "question_idx": room.current_question_idx,
                         "total_questions": int((await redis.hget(state_key, "total_questions")) or 0),

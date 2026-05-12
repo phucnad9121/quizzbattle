@@ -44,40 +44,40 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({
         <div className="flex flex-col items-center gap-6">
           <div className="relative">
             {isCorrect ? (
-              <div className="relative">
-                <CheckCircle2 className="w-24 h-24 text-white animate-bounce" />
-                <Star className="absolute -top-2 -right-2 w-8 h-8 text-yellow-300 fill-yellow-300" />
+              <div className="relative animate-in zoom-in duration-500">
+                <CheckCircle2 className="w-24 h-24 text-white" />
+                <Star className="absolute -top-2 -right-2 w-10 h-10 text-yellow-300 fill-yellow-300 animate-pulse" />
               </div>
             ) : (
-              <XCircle className="w-24 h-24 text-white animate-pulse" />
+              <div className="animate-in zoom-in duration-500">
+                <XCircle className="w-24 h-24 text-white" />
+              </div>
             )}
           </div>
 
           <div>
-            <h3 className="text-4xl font-black italic uppercase tracking-tighter text-white mb-2">
-              {isCorrect ? "CHÍNH XÁC!" : "TIẾC QUÁ!"}
+            <h3 className="text-5xl font-black italic uppercase tracking-tighter text-white mb-2 drop-shadow-lg">
+              {isCorrect ? "TUYỆT VỜI!" : "TIẾC QUÁ!"}
             </h3>
-            <p className="text-white/80 font-bold uppercase tracking-widest text-sm">
-              {isCorrect ? "Bạn thật xuất sắc" : "Cố gắng ở câu sau nhé"}
+            <p className="text-white/90 font-black uppercase tracking-widest text-xs">
+              {isCorrect ? "Bạn đang dẫn đầu!" : "Đừng bỏ cuộc nhé!"}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <div className="bg-black/20 rounded-2xl p-4 flex flex-col items-center justify-center">
-              <Zap className="w-6 h-6 text-yellow-300 mb-1" />
-              <span className="text-2xl font-black text-white">+{scoreEarned}</span>
-              <span className="text-[10px] font-bold text-white/60 uppercase">Điểm</span>
-            </div>
-            <div className="bg-black/20 rounded-2xl p-4 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-white">{(answerTimeMs / 1000).toFixed(2)}s</span>
-              <span className="text-[10px] font-bold text-white/60 uppercase">Tốc độ</span>
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex-1 bg-black/30 backdrop-blur-md rounded-3xl p-5 flex flex-col items-center justify-center border border-white/10">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300" />
+                <span className="text-3xl font-black text-white">+{scoreEarned}</span>
+              </div>
+              <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Điểm kiếm được</span>
             </div>
           </div>
 
-          {!isCorrect && correctAnswer && (
-            <div className="mt-4 w-full text-left">
-              <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Đáp án đúng là:</span>
-              <div className="mt-1 p-4 bg-white/10 rounded-2xl text-white font-bold text-lg">
+          {correctAnswer && (
+            <div className="w-full space-y-2">
+              <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">Đáp án chính xác</span>
+              <div className="p-5 bg-white/20 backdrop-blur-xl rounded-[1.5rem] border border-white/20 text-white font-black text-xl italic uppercase tracking-tight">
                 {correctAnswer}
               </div>
             </div>

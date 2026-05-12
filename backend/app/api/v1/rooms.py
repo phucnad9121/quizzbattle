@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from redis.asyncio import Redis
+import uuid
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
@@ -113,4 +114,64 @@ async def get_room_info(
         "host_username": host_username,
         "quiz_title": quiz_title,
         "player_count": player_count
+    }
+
+@router.get("/{session_id}/results")
+async def get_session_results(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Endpoint lấy kết quả chi tiết của một Game Session:
+    Trả về thông tin Quiz, Host, tổng số câu hỏi và bảng xếp hạng chi tiết.
+    """
+    # 1. Lấy thông tin session và quiz
+    session_query = (
+        select(GameSession, func.count(Question.id).label("q_count"))
+        .join(Question, GameSession.quiz_id == Question.quiz_id)
+        .where(GameSession.id == session_id)
+        .group_by(GameSession.id)
+    )
+    session_res = await db.execute(session_query)
+    session_row = session_res.first()
+    
+    if not session_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tồn tại")
+    
+    session, total_questions = session_row
+
+    # 2. Lấy danh sách người tham gia kèm số câu đúng
+    from app.db.models.game import PlayerAnswer
+    
+    # Subquery để đếm số câu đúng cho mỗi participant
+    correct_count_sub = (
+        select(PlayerAnswer.participant_id, func.count(PlayerAnswer.id).label("correct_count"))
+        .where(PlayerAnswer.is_correct == True)
+        .group_by(PlayerAnswer.participant_id)
+        .subquery()
+    )
+
+    query = (
+        select(GameParticipant, func.coalesce(correct_count_sub.c.correct_count, 0))
+        .outerjoin(correct_count_sub, GameParticipant.id == correct_count_sub.c.participant_id)
+        .where(GameParticipant.session_id == session_id)
+        .order_by(GameParticipant.total_score.desc())
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    
+    return {
+        "quiz_id": str(session.quiz_id),
+        "host_id": str(session.host_id),
+        "total_questions": total_questions,
+        "participants": [
+            {
+                "user_id": str(p.user_id) if p.user_id else str(p.id),
+                "display_name": p.display_name,
+                "score": p.total_score,
+                "rank": p.rank or (i + 1),
+                "correct_answers": correct_count
+            }
+            for i, (p, correct_count) in enumerate(rows)
+        ]
     }

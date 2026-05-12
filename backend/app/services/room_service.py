@@ -110,6 +110,7 @@ class RoomService:
                 "room_code": room.room_code,
                 "status": room.status,
                 "host_id": str(room.host_id),
+                "quiz_id": str(room.quiz_id),
                 "is_latejoiner": room.status == "in_progress",
                 "participants": participants,
             },
