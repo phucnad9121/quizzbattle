@@ -63,6 +63,31 @@ async def websocket_endpoint(
         participant = res.scalar_one_or_none()
         
         if not participant:
+            # Atomic check using a temporary Redis set to track total unique joiners
+            redis = await get_redis()
+            room_code_upper = room_code.upper()
+            total_participants_key = f"game:total_participants:{room_code_upper}"
+            user_id_str = str(current_user.id)
+            
+            # Thử "đăng ký" ID vào set (Trả về 1 nếu là người mới)
+            is_new = await redis.sadd(total_participants_key, user_id_str)
+            
+            if is_new:
+                # Kiểm tra lại tổng số lượng ngay lập tức
+                current_total = await redis.scard(total_participants_key)
+                MAX_PLAYERS = 20
+                
+                if current_total > MAX_PLAYERS:
+                    # Nếu vượt quá, xóa "đăng ký" và từ chối
+                    await redis.srem(total_participants_key, user_id_str)
+                    logger.warning("Room full (Atomic): room=%s user=%s total=%d", room_code, current_user.id, current_total)
+                    await ws.send_json({
+                        "type": "ERROR", 
+                        "payload": {"message": f"Phòng đã đầy! (Tối đa {MAX_PLAYERS} người)"}
+                    })
+                    await ws.close(code=4000)
+                    return
+
             participant = GameParticipant(
                 session_id=room.id,
                 user_id=current_user.id,
@@ -73,15 +98,14 @@ async def websocket_endpoint(
             await db.commit()
             await db.refresh(participant)
 
+        # Sau khi đã chắc chắn là participant, cập nhật các bảng game khác
         redis = await get_redis()
-        active_key = f"game:active:{room_code.upper()}"
-        await redis.sadd(active_key, str(current_user.id))
-
-        # Khởi tạo điểm 0 và lưu tên vào bảng ánh xạ
-        user_id_str = str(current_user.id)
         room_code_upper = room_code.upper()
+        user_id_str = str(current_user.id)
+        active_key = f"game:active:{room_code_upper}"
         
-        # 1. Điểm số (ZSET) - Chỉ dùng ID
+        await redis.sadd(active_key, user_id_str)
+        # Điểm số (ZSET) - Đảm bảo đồng bộ với total_participants
         await redis.zincrby(f"game:leaderboard:{room_code_upper}", 0, user_id_str)
         # 2. Bảng tên (HASH) - Ánh xạ ID -> Name
         await redis.hset(f"game:names:{room_code_upper}", user_id_str, participant.display_name)
