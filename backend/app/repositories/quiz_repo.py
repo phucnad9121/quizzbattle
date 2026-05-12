@@ -184,40 +184,39 @@ class QuestionRepository(BaseRepository):
         if not question:
             return None
         
-        # 1. Cập nhật các thông tin cơ bản của câu hỏi
+        # 1. Cập nhật các thông tin cơ bản
         for key, value in data.items():
-            if key != "options":
+            if key != "options" and hasattr(question, key):
                 setattr(question, key, value)
         
         # 2. Cập nhật options (Nếu có trong payload)
         if "options" in data:
             new_options_data = data["options"]
-            existing_options = question.options  # Đây là list các AnswerOption objects
+            # Sắp xếp options hiện có theo order_index để cập nhật đúng vị trí
+            existing_options = sorted(question.options, key=lambda x: x.order_index)
             
-            # Cập nhật hoặc ghi đè các options hiện có theo index
             for i, opt_data in enumerate(new_options_data):
                 if i < len(existing_options):
-                    # Cập nhật option hiện có
+                    # Cập nhật bản ghi đã tồn tại
                     existing_options[i].option_text = opt_data["option_text"]
                     existing_options[i].is_correct = opt_data["is_correct"]
                     existing_options[i].order_index = i
                 else:
-                    # Thêm option mới nếu số lượng tăng lên
+                    # Thêm bản ghi mới nếu số lượng tăng lên
                     new_opt = AnswerOption(
+                        question_id=question.id,
                         option_text=opt_data["option_text"],
                         is_correct=opt_data["is_correct"],
                         order_index=i
                     )
-                    question.options.append(new_opt)
+                    self.session.add(new_opt)
             
-            # Xóa bớt các options thừa nếu số lượng giảm đi
-            # (Cẩn thận: Đoạn này vẫn có thể gây lỗi nếu xóa trúng option đã được trả lời)
+            # Xóa các bản ghi thừa nếu số lượng giảm đi
             if len(existing_options) > len(new_options_data):
-                # Chỉ xóa những options ở cuối danh sách không còn dùng tới
-                del question.options[len(new_options_data):]
+                for j in range(len(new_options_data), len(existing_options)):
+                    await self.session.delete(existing_options[j])
 
         await self.session.flush()
-        await self.session.refresh(question)
         return question
 
     async def delete(self, question_id: uuid.UUID) -> bool:

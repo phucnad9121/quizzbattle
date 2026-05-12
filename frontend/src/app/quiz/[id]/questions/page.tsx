@@ -206,8 +206,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         {/* Header */}
         <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-4">
-            <Link href="/dashboard" className="inline-flex items-center text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors group">
-              <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Quay lại Dashboard
+            <Link href="/quiz" className="inline-flex items-center text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors group">
+              <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Quay lại My Quiz
             </Link>
             <div className="space-y-2">
                <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">{quiz.title}</h1>

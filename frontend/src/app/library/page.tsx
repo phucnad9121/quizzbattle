@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Navbar } from "@/components/shared/Navbar";
 
 export default function LibraryPage() {
   const [search, setSearch] = useState("");
@@ -27,14 +28,16 @@ export default function LibraryPage() {
   const totalPages = data ? Math.ceil(data.total / size) : 0;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#020617] text-white relative overflow-hidden flex flex-col font-sans">
+      <Navbar />
+
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[120px] rounded-full" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full">
+      <div className="relative z-10 max-w-7xl mx-auto w-full p-6 md:p-12 flex-1">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
           <div className="text-center md:text-left">

@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { QuestionResponse } from "@/types/quiz";
 import { CreateQuestionData } from "@/hooks/useQuestions";
-import { Trash2, PlusCircle, CheckCircle2, Circle } from "lucide-react";
+import { Trash2, PlusCircle, CheckCircle2, Circle, Loader2 } from "lucide-react";
 
 // ... existing code ...
 

@@ -10,8 +10,8 @@ class GameSession(Base, CreatedMixin):
     __tablename__ = "game_sessions"
 
     id:                   Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    quiz_id:              Mapped[uuid.UUID] = mapped_column(ForeignKey("quizzes.id"), nullable=False)
-    host_id:              Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    quiz_id:              Mapped[uuid.UUID] = mapped_column(ForeignKey("quizzes.id", ondelete="CASCADE"), nullable=False)
+    host_id:              Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     room_code:            Mapped[str]       = mapped_column(String(6), unique=True, nullable=False)
     status:               Mapped[str]       = mapped_column(String(20), default="waiting", nullable=False)
     current_question_idx: Mapped[int]       = mapped_column(SmallInteger, default=-1, nullable=False)
@@ -48,8 +48,8 @@ class PlayerAnswer(Base):
 
     id:              Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     participant_id:  Mapped[uuid.UUID] = mapped_column(ForeignKey("game_participants.id", ondelete="CASCADE"), nullable=False)
-    question_id:     Mapped[uuid.UUID] = mapped_column(ForeignKey("questions.id"), nullable=False)
-    selected_option: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("answer_options.id"), nullable=True)
+    question_id:     Mapped[uuid.UUID] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    selected_option: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("answer_options.id", ondelete="CASCADE"), nullable=True)
     is_correct:      Mapped[bool]      = mapped_column(Boolean, default=False, nullable=False)
     score_earned:    Mapped[int]       = mapped_column(Integer, default=0, nullable=False)
     answer_time_ms:  Mapped[int]       = mapped_column(Integer, default=0, nullable=False)
