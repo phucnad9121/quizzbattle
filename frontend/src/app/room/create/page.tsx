@@ -24,6 +24,8 @@ type QuizItem = {
   id: string;
   title: string;
   question_count: number;
+  description: string | null;
+  is_public: boolean;
 };
 
 export default function CreateRoomPage() {
@@ -131,23 +133,59 @@ export default function CreateRoomPage() {
                 <div className="space-y-4">
                   <label className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">
                     <Trophy size={14} className="text-indigo-400" />
-                    Chọn Bộ Câu Hỏi
+                    Chọn Bộ Câu Hỏi Của Bạn
                   </label>
-                  <div className="relative group">
-                    <select
-                      className="w-full bg-white/80 border-2 border-white/5 rounded-2xl p-5 text-lg font-bold appearance-none focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
-                      value={selectedQuiz ?? ""}
-                      onChange={(e) => setSelectedQuiz(e.target.value)}
-                    >
-                      {quizzes.map((q) => (
-                        <option key={q.id} value={q.id} className="bg-slate-900 text-white p-4">
-                          {q.title} — ({q.question_count} câu)
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                      <Sparkles size={20} />
-                    </div>
+                  
+                  <div className="grid grid-cols-1 gap-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                    {quizzes.length === 0 ? (
+                      <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10 text-zinc-500">
+                        Bạn chưa có bộ câu hỏi nào.
+                      </div>
+                    ) : (
+                      quizzes.map((q) => (
+                        <div 
+                          key={q.id}
+                          onClick={() => setSelectedQuiz(q.id)}
+                          className={`group cursor-pointer p-5 rounded-2xl border-2 transition-all duration-300 relative overflow-hidden ${
+                            selectedQuiz === q.id 
+                            ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' 
+                            : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between relative z-10">
+                            <div className="space-y-1">
+                              <h3 className={`text-lg font-black italic uppercase tracking-tight transition-colors ${selectedQuiz === q.id ? 'text-white' : 'text-zinc-300'}`}>
+                                {q.title}
+                              </h3>
+                              {q.description && (
+                                <p className="text-sm text-zinc-500 font-medium line-clamp-1 group-hover:text-zinc-400 transition-colors">
+                                  {q.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                                  {q.question_count} Câu hỏi
+                                </span>
+                                {q.is_public && (
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                    Công khai
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {selectedQuiz === q.id && (
+                              <div className="bg-indigo-500 p-1.5 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                                <Check size={14} className="text-white" strokeWidth={4} />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Hover highlight effect */}
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 blur-[40px] -mr-12 -mt-12 rounded-full" />
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 

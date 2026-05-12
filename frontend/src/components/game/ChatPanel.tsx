@@ -5,7 +5,7 @@ import { useGameStore } from "@/store/gameStore";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Send, ChevronDown, ChevronUp, User } from "lucide-react";
+import { MessageSquare, Send, ChevronDown, ChevronUp, User, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatPanelProps {
@@ -14,7 +14,7 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ sendMessage, isWidget = false }: ChatPanelProps) {
-  const { messages } = useGameStore();
+  const { messages, hostId } = useGameStore();
   const { user } = useAuthStore();
   const [inputText, setInputText] = useState("");
   const [isOpen, setIsOpen] = useState(isWidget);
@@ -86,23 +86,32 @@ export default function ChatPanel({ sendMessage, isWidget = false }: ChatPanelPr
               ) : (
                 messages.map((msg, idx) => {
                   const isMe = msg.user_id === user?.id;
+                  const isHost = msg.user_id === hostId;
                   return (
                     <div 
                       key={idx} 
                       className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                     >
-                      <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <span className={`text-[10px] font-bold ${isMe ? "text-indigo-400" : "text-white/50"}`}>
+                      <div className={`flex items-center gap-1.5 mb-1 px-1 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                        <span className={`text-[10px] font-bold ${isMe ? "text-indigo-400" : isHost ? "text-amber-400" : "text-white/50"}`}>
                           {msg.username}
                         </span>
+                        {isHost && (
+                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[8px] font-black uppercase tracking-tighter">
+                            <Crown size={8} className="fill-amber-500" />
+                            Host
+                          </span>
+                        )}
                         <span className="text-[9px] text-white/30">
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div className={`
-                        max-w-[85%] px-3 py-2 rounded-2xl text-sm
+                        max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed
                         ${isMe 
-                          ? "bg-indigo-600 text-white rounded-tr-none" 
+                          ? "bg-indigo-600 text-white rounded-tr-none shadow-[0_5px_15px_rgba(79,70,229,0.2)]" 
+                          : isHost
+                          ? "bg-indigo-500/20 text-white rounded-tl-none border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
                           : "bg-white/10 text-white/90 rounded-tl-none border border-white/5"
                         }
                       `}>
