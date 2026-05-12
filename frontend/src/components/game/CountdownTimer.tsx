@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from "@/lib/utils";
 import { Timer } from "lucide-react";
+import { useSound } from "@/hooks/useSound";
 
 interface CountdownTimerProps {
   totalSeconds: number;
@@ -16,6 +17,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   className 
 }) => {
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
+  const { playSound } = useSound();
+  const lastSecondBeeped = useRef<number>(-1);
   const requestRef = useRef<number>(null);
   const startTimeRef = useRef<number>(null);
 
@@ -40,6 +43,14 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     return () => clearInterval(interval);
   }, [totalSeconds]); // Chỉ chạy lại khi thời gian tổng thay đổi, không phụ thuộc vào onExpire
 
+  useEffect(() => {
+    const currentSecond = Math.ceil(timeLeft);
+    if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastSecondBeeped.current) {
+      playSound("countdown");
+      lastSecondBeeped.current = currentSecond;
+    }
+  }, [timeLeft, playSound]);
+
   const percentage = (timeLeft / totalSeconds) * 100;
   
   // Color logic for the progress bar and text
@@ -62,33 +73,37 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   };
 
   const colors = getColors();
+  const isCompact = className?.includes('p-0');
 
   return (
     <div className={cn("w-full max-w-md mx-auto p-4 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border border-white/20 dark:border-gray-800 shadow-xl", className)}>
-      <div className="flex justify-between items-end mb-3">
+      <div className={cn("flex justify-between items-end", isCompact ? "mb-1" : "mb-3")}>
         <div className="flex items-center gap-2">
-          <div className={cn("p-2 rounded-lg", colors.bg)}>
-            <Timer className={cn("w-5 h-5", colors.text)} />
-          </div>
+          {!isCompact && (
+            <div className={cn("p-2 rounded-lg", colors.bg)}>
+              <Timer className={cn("w-5 h-5", colors.text)} />
+            </div>
+          )}
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Thời gian</span>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Nhanh lên nào!</span>
+            <span className={cn("font-bold uppercase tracking-widest text-gray-400", isCompact ? "text-[8px]" : "text-[10px]")}>Thời gian</span>
+            {!isCompact && <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Nhanh lên nào!</span>}
           </div>
         </div>
         
         <div className="text-right">
           <span className={cn(
-            "text-4xl font-black tabular-nums tracking-tighter transition-all duration-300",
+            "font-black tabular-nums tracking-tighter transition-all duration-300",
             colors.text,
+            isCompact ? "text-2xl" : "text-4xl",
             percentage < 15 ? "animate-pulse scale-110" : ""
           )}>
             {Math.ceil(timeLeft)}
           </span>
-          <span className="text-xs font-bold text-gray-400 ml-1">GIÂY</span>
+          <span className={cn("font-bold text-gray-400 ml-1", isCompact ? "text-[8px]" : "text-xs")}>S</span>
         </div>
       </div>
 
-      <div className="relative h-3 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden p-[0.5px]">
+      <div className={cn("relative w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden p-[0.5px]", isCompact ? "h-2" : "h-3")}>
         <div 
           className={cn(
             "h-full rounded-full transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(0,0,0,0.1)]", 
@@ -96,22 +111,22 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           )}
           style={{ width: `${percentage}%` }}
         />
-        {/* Glossy overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
       </div>
       
-      {/* Decorative dots for a more premium look */}
-      <div className="flex justify-between px-1 pt-1">
-        {[...Array(5)].map((_, i) => (
-          <div 
-            key={i} 
-            className={cn(
-              "w-1 h-1 rounded-full transition-colors duration-500",
-              (i + 1) * 20 <= percentage ? "bg-gray-400" : "bg-gray-200 dark:bg-gray-700"
-            )} 
-          />
-        ))}
-      </div>
+      {!isCompact && (
+        <div className="flex justify-between px-1 pt-1">
+          {[...Array(5)].map((_, i) => (
+            <div 
+              key={i} 
+              className={cn(
+                "w-1 h-1 rounded-full transition-colors duration-500",
+                (i + 1) * 20 <= percentage ? "bg-gray-400" : "bg-gray-200 dark:bg-gray-700"
+              )} 
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

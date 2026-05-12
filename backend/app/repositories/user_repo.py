@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.user import RefreshToken, User
+from app.db.models.game import GameParticipant, PlayerAnswer
 from app.repositories.base import BaseRepository
 from app.schemas.user import UserCreate
 
@@ -116,3 +117,38 @@ class UserRepository(BaseRepository):
         )
         await self.session.flush()
         return result.rowcount or 0
+
+    async def get_stats(self, user_id: uuid.UUID) -> dict:
+        # 1. Tổng số game đã chơi
+        q_total = select(func.count(GameParticipant.id)).where(GameParticipant.user_id == user_id)
+        res_total = await self.session.execute(q_total)
+        total_games = res_total.scalar() or 0
+
+        # 2. Điểm trung bình và Thứ hạng tốt nhất
+        q_avg_best = select(
+            func.avg(GameParticipant.total_score),
+            func.min(GameParticipant.rank)
+        ).where(GameParticipant.user_id == user_id)
+        res_avg_best = await self.session.execute(q_avg_best)
+        avg_score, best_rank = res_avg_best.one()
+
+        # 3. Tỉ lệ câu trả lời đúng
+        # Join GameParticipant với PlayerAnswer để lấy answers của user này
+        q_correct = select(
+            func.count(PlayerAnswer.id).filter(PlayerAnswer.is_correct.is_(True)),
+            func.count(PlayerAnswer.id)
+        ).join(
+            GameParticipant, PlayerAnswer.participant_id == GameParticipant.id
+        ).where(GameParticipant.user_id == user_id)
+        
+        res_correct = await self.session.execute(q_correct)
+        correct_count, total_answers = res_correct.one()
+
+        correct_rate = (correct_count / total_answers * 100) if total_answers > 0 else 0.0
+
+        return {
+            "total_games_played": total_games,
+            "avg_score": float(avg_score or 0),
+            "correct_rate": float(correct_rate),
+            "best_rank": best_rank
+        }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useGameStore } from "@/store/gameStore";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useSound } from "@/hooks/useSound";
 import CountdownTimer from "@/components/game/CountdownTimer";
 import QuestionDisplay from "@/components/game/QuestionDisplay";
 import AnswerButtons from "@/components/game/AnswerButtons";
@@ -12,8 +13,10 @@ import ResultOverlay from "@/components/game/ResultOverlay";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { apiClient } from "@/lib/api";
-import { Loader2, ArrowLeft, Zap, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, Zap, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
+import { Howler } from "howler";
 
 export default function GamePage() {
   const params = useParams();
@@ -38,6 +41,15 @@ export default function GamePage() {
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+
+  const { playSound, isMuted, toggleMute: toggleMuteBase } = useSound();
+
+  const toggleMute = () => {
+    if (Howler.ctx && Howler.ctx.state === 'suspended') {
+      Howler.ctx.resume();
+    }
+    toggleMuteBase();
+  };
 
   const isHost = user?.id === hostId;
 
@@ -74,6 +86,53 @@ export default function GamePage() {
     setShowLeaderboard(false);
   }, [questionEnd]);
 
+  // QB-066 & QB-067: Confetti and Sound on correct answer
+  useEffect(() => {
+    if (answerResult) {
+      if (answerResult.is_correct) {
+        playSound("correct");
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          zIndex: 100
+        });
+      } else {
+        playSound("wrong");
+      }
+    }
+  }, [answerResult, playSound]);
+
+  // QB-066 & QB-067: Confetti and Fanfare on match finish (Top 3)
+  useEffect(() => {
+    if (status === "finished" && leaderboard.length > 0) {
+      const myRank = leaderboard.findIndex(e => e.user_id === user?.id) + 1;
+      
+      if (myRank > 0 && myRank <= 3) {
+        playSound("gameOver");
+        const duration = 5 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+        
+        return () => clearInterval(interval);
+      }
+    }
+  }, [status, leaderboard, user?.id, playSound]);
+
   const handleSelectOption = (optionId: string) => {
     if (selectedOption || answerResult) return;
     
@@ -92,6 +151,9 @@ export default function GamePage() {
   };
 
   const handleLeave = () => {
+    if (Howler.ctx && Howler.ctx.state === 'suspended') {
+      Howler.ctx.resume();
+    }
     resetGame();
     router.push("/dashboard");
   };
@@ -140,9 +202,20 @@ export default function GamePage() {
                 resetGame();
                 router.push("/dashboard");
               }}
-              className="h-16 px-12 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 text-white font-black text-lg transition-all uppercase italic"
+              className="h-16 px-8 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 text-white font-black text-lg transition-all uppercase italic"
             >
-              Về Dashboard
+              Dashboard
+            </Button>
+
+            <Button 
+              size="lg" 
+              variant="secondary"
+              onClick={() => {
+                router.push(`/results/${roomCode}`);
+              }}
+              className="h-16 px-8 rounded-2xl bg-white text-slate-950 hover:bg-zinc-200 font-black text-lg transition-all uppercase italic flex items-center gap-2 shadow-lg"
+            >
+              Xem chi tiết
             </Button>
             
             {isHost && (
@@ -187,7 +260,8 @@ export default function GamePage() {
       </div>
 
       {/* Header / Top Bar */}
-      <div className="relative z-20 flex flex-wrap items-center justify-between p-4 md:p-8 gap-4 bg-black/20 backdrop-blur-md border-b border-white/5">
+      <div className="relative z-20 flex items-center justify-between p-4 md:p-8 bg-black/20 backdrop-blur-md border-b border-white/5">
+        {/* Left: Exit */}
         <div className="flex-shrink-0">
           <Button 
             variant="ghost" 
@@ -199,55 +273,73 @@ export default function GamePage() {
           </Button>
         </div>
 
-        <div className="flex flex-col items-center gap-1">
-          <div className="px-3 py-0.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Quizz Battle</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-xl font-black italic shadow-lg shadow-indigo-500/20">
+        {/* Center: Countdown & Question Progress */}
+        <div className="flex-1 max-w-4xl mx-auto flex items-center justify-center gap-6 px-4">
+          <div className="flex items-center gap-3 shrink-0 py-2 px-4 bg-white/5 rounded-2xl border border-white/5">
+            <button 
+              onClick={() => playSound('correct')}
+              className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-lg font-black italic shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform"
+              title="Test Sound"
+            >
               {((currentQuestion?.question_idx ?? 0) + 1)}/{currentQuestion?.total_questions}
-            </div>
+            </button>
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Câu hỏi</span>
-              <span className="text-sm font-black text-white italic uppercase tracking-tighter">Đang diễn ra</span>
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter cursor-help" onClick={() => playSound('correct')}>Quizz Battle</span>
+              <span className="text-sm font-black text-white italic uppercase tracking-tighter leading-tight">Live</span>
             </div>
+          </div>
+
+          <div className="flex-1 max-w-md">
+            {answerResult || questionEnd ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-2 rounded-full flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.1)] h-12">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+                <span className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">
+                  {questionEnd
+                    ? `Tiếp theo: ${transitionCountdown}s`
+                    : "Đang chờ..."}
+                </span>
+              </div>
+            ) : (
+              <CountdownTimer 
+                key={currentQuestion?.question_id}
+                totalSeconds={currentQuestion?.time_limit_secs || 20} 
+                className="shadow-none bg-transparent border-none p-0 max-w-none"
+              />
+            )}
           </div>
         </div>
 
-        {/* Host Skip Button */}
-        {isHost && !answerResult && (
-          <Button
-            onClick={handleSkipQuestion}
-            className="h-14 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 px-6"
-          >
-            <Zap size={20} fill="currentColor" />
-            Chuyển nhanh
-          </Button>
-        )}
+        {/* Right: Controls & Code */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMute}
+              className={`w-12 h-12 rounded-2xl border transition-all ${
+                isMuted 
+                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
+                  : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+              }`}
+            >
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </Button>
 
-        <div className="flex-1 max-md:order-3 max-w-md mx-auto h-14 flex items-center justify-center">
-          {answerResult || questionEnd ? (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-2 rounded-full flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-              <span className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">
-                {questionEnd
-                  ? `Câu tiếp theo sau ${transitionCountdown}s...`
-                  : "Đang chờ kết quả..."}
-              </span>
+            {isHost && !answerResult && (
+              <Button
+                onClick={handleSkipQuestion}
+                className="h-12 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 px-4"
+              >
+                <Zap size={18} fill="currentColor" />
+              </Button>
+            )}
+          </div>
+
+          <div className="hidden lg:block">
+            <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-right">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block mb-1">Mã phòng</span>
+              <span className="text-xl font-black font-mono text-indigo-400">{roomCode}</span>
             </div>
-          ) : (
-            <CountdownTimer 
-              key={currentQuestion?.question_id}
-              totalSeconds={currentQuestion?.time_limit_secs || 20} 
-              onExpire={() => console.log("Time up")} 
-            />
-          )}
-        </div>
-
-        <div className="hidden md:block">
-          <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-right">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block mb-1">Mã phòng</span>
-            <span className="text-xl font-black font-mono text-indigo-400">{roomCode}</span>
           </div>
         </div>
       </div>

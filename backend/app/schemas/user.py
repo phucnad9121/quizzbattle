@@ -50,3 +50,10 @@ class UserResponse(UserPublic):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class UserStatsResponse(BaseModel):
+    total_games_played: int
+    avg_score: float
+    correct_rate: float
+    best_rank: int | None

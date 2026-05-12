@@ -116,16 +116,30 @@ async def get_room_info(
         "player_count": player_count
     }
 
-@router.get("/{session_id}/results")
+@router.get("/{session_id_or_code}/results")
 async def get_session_results(
-    session_id: uuid.UUID,
+    session_id_or_code: str,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Endpoint lấy kết quả chi tiết của một Game Session:
-    Trả về thông tin Quiz, Host, tổng số câu hỏi và bảng xếp hạng chi tiết.
+    Hỗ trợ cả session_id (UUID) và room_code (6 chars).
     """
-    # 1. Lấy thông tin session và quiz
+    # 1. Xác định session_id từ đầu vào
+    session_id = None
+    try:
+        session_id = uuid.UUID(session_id_or_code)
+    except ValueError:
+        # Nếu không phải UUID, kiểm tra xem có phải room_code không
+        if len(session_id_or_code) == 6:
+            code_query = select(GameSession.id).where(GameSession.room_code == session_id_or_code.upper())
+            code_res = await db.execute(code_query)
+            session_id = code_res.scalar_one_or_none()
+    
+    if not session_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Phiên chơi không tồn tại")
+
+    # 2. Lấy thông tin session và quiz
     session_query = (
         select(GameSession, func.count(Question.id).label("q_count"))
         .join(Question, GameSession.quiz_id == Question.quiz_id)
