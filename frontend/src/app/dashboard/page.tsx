@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PlusCircle, PlaySquare, BookOpen } from "lucide-react";
 import { useQuizzes } from "@/hooks/useQuizzes";
 import { QuizCard } from "@/components/quiz/QuizCard";
+import { JoinRoomWidget } from "@/components/room/JoinRoomWidget";
 
 export default function DashboardPage() {
   const { data, isLoading, isError } = useQuizzes();
@@ -19,46 +20,50 @@ export default function DashboardPage() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-16">
-          <div className="space-y-2">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 mb-20">
+          <div className="space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full mb-2">
               <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Quản lý Quiz</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
-              Thư viện <span className="text-indigo-500">Quiz</span> của bạn
+            <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none">
+              Thư viện <span className="text-indigo-500">Quiz</span> <br /> của bạn
             </h1>
-            <p className="text-zinc-400 font-medium max-w-md">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
+            <p className="text-zinc-400 font-medium max-w-md text-lg">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4">
-            <Link
-              href="/library"
-              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl border border-white/10 backdrop-blur-md transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_rgba(255,255,255,0.05)]"
-            >
-              <BookOpen className="w-6 h-6 text-indigo-400" />
-              <span>Thư viện chung</span>
-            </Link>
+          <div className="flex flex-col md:flex-row items-center gap-10">
+            <div className="flex flex-col gap-4 w-full md:w-72">
+              <Link
+                href="/quiz/create"
+                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-linear-to-r from-indigo-500 to-purple-600 text-white font-black uppercase italic rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-indigo-500/20"
+              >
+                <PlusCircle size={24} />
+                <span className="text-lg">Tạo Quiz Mới</span>
+              </Link>
 
-            <Link
-              href="/room/create"
-              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)]"
-            >
-              <PlaySquare className="w-6 h-6" />
-              <span>Tạo Phòng</span>
-            </Link>
-            
-            <Link
-              href="/quiz/create"
-              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-linear-to-r from-indigo-500 to-purple-600 text-white font-black uppercase italic rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(79,70,229,0.3)]"
-            >
-              <PlusCircle className="w-6 h-6" />
-              <span>Tạo Quiz Mới</span>
-            </Link>
+              <Link
+                href="/room/create"
+                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-emerald-500/20"
+              >
+                <PlaySquare size={24} />
+                <span className="text-lg">Tạo Phòng</span>
+              </Link>
+
+              <Link
+                href="/library"
+                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-[3rem] border border-white/10 backdrop-blur-md transition-all hover:scale-[1.05] active:scale-95"
+              >
+                <BookOpen size={24} className="text-indigo-400" />
+                <span className="text-lg">Thư viện chung</span>
+              </Link>
+            </div>
+
+            <JoinRoomWidget />
           </div>
         </div>
 
-        {/* Loading State */}
+      {/* Loading State */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -115,7 +120,6 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-
       </div>
     </div>
   );
