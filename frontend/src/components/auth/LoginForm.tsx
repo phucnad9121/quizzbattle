@@ -25,7 +25,7 @@ import { useAuthStore } from "@/store/authStore";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
-  password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
+  password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;

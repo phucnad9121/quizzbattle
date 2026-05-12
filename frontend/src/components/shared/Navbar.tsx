@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 const navLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "My Quizzes", href: "/quiz" },
+  { label: "Library", href: "/library" },
 ];
 
 export function Navbar() {

@@ -26,8 +26,8 @@ const registerSchema = z
   .object({
     username: z.string().min(3, "Username ít nhất 3 ký tự"),
     email: z.string().email("Email không hợp lệ"),
-    password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
-    confirmPassword: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
+    password: z.string().min(1, "Vui lòng nhập mật khẩu"),
+    confirmPassword: z.string().min(1, "Vui lòng nhập mật khẩu"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Mật khẩu xác nhận không khớp",

@@ -17,6 +17,7 @@ class Quiz(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_url:   Mapped[str | None] = mapped_column(Text, nullable=True)
     is_public:   Mapped[bool]      = mapped_column(Boolean, default=False, nullable=False)
+    forked_from_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("quizzes.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
         Index("idx_quizzes_owner", "owner_id"),

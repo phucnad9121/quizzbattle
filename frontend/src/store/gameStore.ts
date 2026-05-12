@@ -26,6 +26,7 @@ type GameState = {
 	finalResults: FinalResults | null;
 	quizId: string | null;
 	hostId: string | null;
+	messages: ChatMessage[];
 	setRoomState: (payload: RoomStatePayload) => void;
 	setQuestion: (payload: QuestionStartPayload) => void;
 	setTimeLeft: (seconds: number | null) => void;
@@ -34,6 +35,7 @@ type GameState = {
 	setQuestionEnd: (payload: QuestionEndPayload | null) => void;
 	updateLeaderboard: (entries: LeaderboardEntry[]) => void;
 	setGameOver: (payload: GameOverPayload) => void;
+	addMessage: (message: ChatMessage) => void;
 	handlePlayerJoined: (payload: PlayerJoinedPayload) => void;
 	handlePlayerLeft: (payload: PlayerLeftPayload) => void;
 	resetGame: () => void;
@@ -52,6 +54,7 @@ const initialState = {
 	finalResults: null,
 	quizId: null,
 	hostId: null,
+	messages: [],
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -84,6 +87,10 @@ export const useGameStore = create<GameState>((set) => ({
 			finalResults: payload.leaderboard,
 			leaderboard: payload.leaderboard,
 			quizId: payload.quiz_id || null,
+		})),
+	addMessage: (message) =>
+		set((state) => ({
+			messages: [...state.messages, message].slice(-50), // Giữ 50 tin nhắn gần nhất
 		})),
 	handlePlayerJoined: (payload) =>
 		set((state) => {

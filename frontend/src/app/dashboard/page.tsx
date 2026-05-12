@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PlusCircle, PlaySquare } from "lucide-react";
+import { PlusCircle, PlaySquare, BookOpen } from "lucide-react";
 import { useQuizzes } from "@/hooks/useQuizzes";
 import { QuizCard } from "@/components/quiz/QuizCard";
 
@@ -33,18 +33,19 @@ export default function DashboardPage() {
           
           <div className="flex flex-wrap items-center gap-4">
             <Link
+              href="/library"
+              className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl border border-white/10 backdrop-blur-md transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_rgba(255,255,255,0.05)]"
+            >
+              <BookOpen className="w-6 h-6 text-indigo-400" />
+              <span>Thư viện chung</span>
+            </Link>
+
+            <Link
               href="/room/create"
               className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)]"
             >
               <PlaySquare className="w-6 h-6" />
               <span>Tạo Phòng</span>
-            </Link>
-            
-            <Link
-              href="/room/join"
-              className="inline-flex items-center justify-center gap-3 px-8 py-5 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl border border-white/10 backdrop-blur-md transition-all hover:scale-105 active:scale-95"
-            >
-              <span>Vào Phòng</span>
             </Link>
             
             <Link

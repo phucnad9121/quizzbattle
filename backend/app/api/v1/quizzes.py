@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, status, HTTPException, Response
+from fastapi import APIRouter, Depends, status, HTTPException, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db, PaginationParams, paginate, get_optional_user
@@ -9,6 +9,27 @@ from app.repositories.quiz_repo import QuizRepository, QuestionRepository
 from app.db.models.user import User
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
+
+@router.get("/public", response_model=QuizListResponse)
+async def get_public_quizzes(
+    search: str | None = Query(None),
+    sort: str = Query("newest"),
+    pagination: PaginationParams = Depends(paginate),
+    session: AsyncSession = Depends(get_db),
+):
+    repo = QuizRepository(session)
+    items, total = await repo.get_public(
+        page=pagination.page, 
+        size=pagination.size, 
+        search=search, 
+        sort=sort
+    )
+    return {
+        "items": items,
+        "total": total,
+        "page": pagination.page,
+        "size": pagination.size
+    }
 
 @router.post("", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
 async def create_quiz(
@@ -102,6 +123,21 @@ async def delete_quiz(
     await repo.delete(id)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/{id}/fork", response_model=QuizResponse)
+async def fork_quiz(
+    id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    repo = QuizRepository(session)
+    forked = await repo.fork(id, current_user.id)
+    if not forked:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    await session.commit()
+    await session.refresh(forked, ["questions"])
+    return forked
 
 @router.post("/{id}/questions", response_model=QuestionResponse, status_code=status.HTTP_201_CREATED)
 async def create_question(

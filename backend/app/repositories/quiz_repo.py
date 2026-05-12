@@ -42,6 +42,33 @@ class QuizRepository(BaseRepository):
         items = result.scalars().all()
         return items, total
 
+    async def get_public(self, page: int, size: int, search: str | None = None, sort: str = "newest") -> Tuple[Sequence[Quiz], int]:
+        filters = [Quiz.is_public == True]
+        if search:
+            filters.append(Quiz.title.ilike(f"%{search}%"))
+
+        count_query = select(func.count(Quiz.id)).where(*filters)
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar_one()
+
+        query = (
+            select(Quiz)
+            .where(*filters)
+            .options(selectinload(Quiz.questions))
+            .limit(size)
+            .offset((page - 1) * size)
+        )
+
+        if sort == "newest":
+            query = query.order_by(Quiz.created_at.desc())
+        # Popularity sort can be added here later with joins
+        else:
+            query = query.order_by(Quiz.created_at.desc())
+
+        result = await self.session.execute(query)
+        items = result.scalars().all()
+        return items, total
+
     async def create(self, owner_id: uuid.UUID, data: dict[str, Any]) -> Quiz:
         quiz = Quiz(owner_id=owner_id, **data)
         self.session.add(quiz)
@@ -67,6 +94,60 @@ class QuizRepository(BaseRepository):
         query = select(Quiz.id).where(Quiz.id == quiz_id, Quiz.owner_id == user_id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
+
+    async def fork(self, quiz_id: uuid.UUID, new_owner_id: uuid.UUID) -> Quiz | None:
+        # 1. Check if user already forked this quiz
+        existing_query = select(Quiz).where(
+            Quiz.owner_id == new_owner_id,
+            Quiz.forked_from_id == quiz_id
+        ).options(selectinload(Quiz.questions))
+        existing_result = await self.session.execute(existing_query)
+        existing = existing_result.scalar_one_or_none()
+        if existing:
+            return existing
+
+        # 2. Get original quiz with questions and options
+        original = await self.get_detail(quiz_id)
+        if not original:
+            return None
+        
+        # 3. Create new quiz based on original
+        new_quiz = Quiz(
+            owner_id=new_owner_id,
+            title=f"{original.title} (Forked)",
+            description=original.description,
+            cover_url=original.cover_url,
+            is_public=False,
+            forked_from_id=quiz_id
+        )
+        self.session.add(new_quiz)
+        await self.session.flush()
+        
+        # 4. Clone questions and options
+        for q in original.questions:
+            new_q = Question(
+                quiz_id=new_quiz.id,
+                question_text=q.question_text,
+                question_type=q.question_type,
+                time_limit_secs=q.time_limit_secs,
+                points=q.points,
+                order_index=q.order_index,
+                image_url=q.image_url
+            )
+            self.session.add(new_q)
+            await self.session.flush()
+            
+            for opt in q.options:
+                new_opt = AnswerOption(
+                    question_id=new_q.id,
+                    option_text=opt.option_text,
+                    is_correct=opt.is_correct,
+                    order_index=opt.order_index
+                )
+                self.session.add(new_opt)
+        
+        await self.session.flush()
+        return new_quiz
 
 
 class QuestionRepository(BaseRepository):

@@ -7,6 +7,7 @@ import type {
 	QuestionEndPayload,
 	QuestionStartPayload,
 	RoomStatePayload,
+	ChatMessage,
 	WsMessage,
 } from "@/types/game";
 
@@ -28,6 +29,8 @@ const handlers: Record<string, (payload: unknown) => void> = {
 	},
 	GAME_OVER: (payload) =>
 		useGameStore.getState().setGameOver(payload as GameOverPayload),
+	CHAT_MESSAGE: (payload) =>
+		useGameStore.getState().addMessage(payload as ChatMessage),
 	ERROR: (payload) => {
 		const message =
 			typeof payload === "object" && payload && "message" in payload

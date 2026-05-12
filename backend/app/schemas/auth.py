@@ -6,12 +6,12 @@ from app.schemas.user import UserCreate
 
 
 class RegisterRequest(UserCreate):
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=1)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=1)
 
 
 class TokenResponse(BaseModel):

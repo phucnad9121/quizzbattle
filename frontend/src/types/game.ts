@@ -71,6 +71,26 @@ export type GameOverPayload = {
 
 export type FinalResults = LeaderboardEntry[];
 
+export type ChatMessage = {
+	user_id: string;
+	username: string;
+	text: string;
+	timestamp: string;
+};
+
+export type ChatMessagePayload = ChatMessage;
+
+export type GameEvent =
+	| { type: "ROOM_STATE"; payload: RoomStatePayload }
+	| { type: "PLAYER_JOINED"; payload: PlayerJoinedPayload }
+	| { type: "PLAYER_LEFT"; payload: PlayerLeftPayload }
+	| { type: "QUESTION_START"; payload: QuestionStartPayload }
+	| { type: "QUESTION_END"; payload: QuestionEndPayload }
+	| { type: "ANSWER_ACK"; payload: AnswerAckPayload }
+	| { type: "GAME_OVER"; payload: GameOverPayload }
+	| { type: "CHAT_MESSAGE"; payload: ChatMessagePayload }
+	| { type: "ERROR"; payload: { message: string } };
+
 export type WsMessage<TPayload = unknown> = {
 	type: string;
 	payload?: TPayload;

@@ -160,6 +160,21 @@ async def websocket_endpoint(
                             "type": "ERROR",
                             "payload": {"message": f"Lỗi xử lý đáp án: {str(e)}"}
                         })
+                
+                elif event_type == "CHAT_MESSAGE":
+                    payload = data.get("payload", {})
+                    text = payload.get("text", "").strip()
+                    if text and len(text) <= 200:
+                        from datetime import datetime
+                        await publish_room_event(room_code, {
+                            "type": "CHAT_MESSAGE",
+                            "payload": {
+                                "user_id": str(current_user.id),
+                                "username": current_user.username,
+                                "text": text,
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        })
             except WebSocketDisconnect:
                 raise
             except Exception as e:
