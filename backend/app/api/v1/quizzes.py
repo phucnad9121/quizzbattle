@@ -1,5 +1,9 @@
 import uuid
-from fastapi import APIRouter, Depends, status, HTTPException, Response, Query
+from fastapi import APIRouter, Depends, status, HTTPException, Response, Query, UploadFile, File, Form
+import io
+import pandas as pd
+from openpyxl import load_workbook
+from docx import Document
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db, PaginationParams, paginate, get_optional_user
@@ -196,3 +200,170 @@ async def reorder_questions(
     # Fetch again to get updated order and relations
     await session.refresh(quiz, ["questions"])
     return QuizDetailResponse.model_validate(quiz)
+
+@router.post("/import-excel", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
+async def import_quiz_from_excel(
+    title: str = Form(...),
+    description: str | None = Form(None),
+    is_public: bool = Form(False),
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Only Excel files are supported")
+
+    try:
+        content = await file.read()
+        wb = load_workbook(io.BytesIO(content), data_only=True)
+        sheet = wb.active
+        
+        questions_to_create = []
+        
+        # Duyệt từ dòng thứ 2 (dòng 1 là header)
+        for row in sheet.iter_rows(min_row=2, values_only=False):
+            # Cột 1 (index 0): Câu hỏi
+            q_text = row[0].value
+            if not q_text:
+                continue
+                
+            options = []
+            # Cột 2-5 (index 1-4): Các lựa chọn
+            for i in range(1, 5):
+                opt_text = row[i].value
+                if opt_text is None:
+                    continue
+                
+                # Kiểm tra màu nền ô. Nếu có màu (không phải trắng/không màu) thì là đáp án đúng
+                # Lưu ý: PatternFill.fgColor có thể là '00000000' (trong suốt)
+                is_correct = False
+                fill = row[i].fill
+                if fill and fill.start_color and fill.start_color.index != '00000000' and fill.start_color.rgb != '00000000':
+                    is_correct = True
+                
+                options.append({
+                    "option_text": str(opt_text),
+                    "is_correct": is_correct
+                })
+            
+            # Cột 6 (index 5): Thời gian (giây)
+            time_limit = row[5].value if len(row) > 5 and row[5].value else 30
+            # Cột 7 (index 6): Điểm
+            points = row[6].value if len(row) > 6 and row[6].value else 1000
+            
+            questions_to_create.append({
+                "question_text": str(q_text),
+                "question_type": "multiple_choice",
+                "time_limit_secs": int(time_limit),
+                "points": int(points),
+                "options": options
+            })
+
+        if not questions_to_create:
+            raise HTTPException(status_code=400, detail="No valid questions found in Excel file")
+
+        # Tạo Quiz
+        quiz_repo = QuizRepository(session)
+        quiz = await quiz_repo.create(owner_id=current_user.id, data={
+            "title": title,
+            "description": description,
+            "is_public": is_public
+        })
+        
+        # Tạo Câu hỏi
+        question_repo = QuestionRepository(session)
+        for idx, q_data in enumerate(questions_to_create):
+            q_data["order_index"] = idx
+            await question_repo.create(quiz_id=quiz.id, data=q_data)
+            
+        await session.commit()
+        await session.refresh(quiz, ["questions"])
+        return quiz
+        
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing Excel file: {str(e)}")
+
+@router.post("/import-word", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
+async def import_quiz_from_word(
+    title: str = Form(...),
+    description: str | None = Form(None),
+    is_public: bool = Form(False),
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    if not file.filename.endswith('.docx'):
+        raise HTTPException(status_code=400, detail="Only .docx files are supported")
+
+    try:
+        content = await file.read()
+        doc = Document(io.BytesIO(content))
+        
+        questions_to_create = []
+        paragraphs = [p for p in doc.paragraphs if p.text.strip()]
+        
+        # Giả định cấu trúc: 1 câu hỏi + 4 đáp án = 5 paragraph
+        i = 0
+        while i < len(paragraphs):
+            q_text = paragraphs[i].text.strip()
+            options = []
+            
+            # Lấy 4 đoạn tiếp theo làm đáp án
+            for j in range(1, 5):
+                if i + j < len(paragraphs):
+                    opt_para = paragraphs[i+j]
+                    opt_text = opt_para.text.strip()
+                    
+                    # Kiểm tra highlight trong các run của paragraph
+                    is_correct = False
+                    for run in opt_para.runs:
+                        if run.font.highlight_color is not None:
+                            is_correct = True
+                            break
+                    
+                    # Nếu text có dạng "A. Nội dung", "B. Nội dung", ta có thể strip tiền tố nếu muốn
+                    # Ở đây mình giữ nguyên hoặc xử lý nhẹ
+                    clean_opt_text = opt_text
+                    if len(opt_text) > 2 and opt_text[1:3] == ". ":
+                        clean_opt_text = opt_text[3:]
+
+                    options.append({
+                        "option_text": clean_opt_text,
+                        "is_correct": is_correct
+                    })
+            
+            if q_text and options:
+                questions_to_create.append({
+                    "question_text": q_text,
+                    "question_type": "multiple_choice",
+                    "time_limit_secs": 30,
+                    "points": 1000,
+                    "options": options
+                })
+            
+            i += 5 # Nhảy sang cụm tiếp theo
+
+        if not questions_to_create:
+            raise HTTPException(status_code=400, detail="No valid questions found in Word file. Ensure 1 question followed by 4 options.")
+
+        # Tạo Quiz & Questions (Reuse logic)
+        quiz_repo = QuizRepository(session)
+        quiz = await quiz_repo.create(owner_id=current_user.id, data={
+            "title": title,
+            "description": description,
+            "is_public": is_public
+        })
+        
+        question_repo = QuestionRepository(session)
+        for idx, q_data in enumerate(questions_to_create):
+            q_data["order_index"] = idx
+            await question_repo.create(quiz_id=quiz.id, data=q_data)
+            
+        await session.commit()
+        await session.refresh(quiz, ["questions"])
+        return quiz
+
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing Word file: {str(e)}")

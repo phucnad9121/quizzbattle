@@ -34,11 +34,11 @@ export function ConfirmDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-red-600 flex items-center gap-2">
-            {title}
+          <DialogTitle asChild className="text-red-500">
+            <div className="flex items-center gap-2">{title}</div>
           </DialogTitle>
-          <DialogDescription className="pt-2 text-slate-600">
-            {description}
+          <DialogDescription asChild className="pt-2 text-zinc-400">
+            <div>{description}</div>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-6 flex gap-2 sm:justify-end">
