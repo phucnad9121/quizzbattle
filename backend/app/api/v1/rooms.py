@@ -5,11 +5,13 @@ from redis.asyncio import Redis
 import uuid
 
 from app.api.deps import get_current_user
+from app.infrastructure.limiter import limiter
 from app.db.session import get_db
 from app.infrastructure.redis_client import get_redis
 from app.db.models import User, Quiz, Question, GameSession, GameParticipant
 from app.services.room_service import room_service
 from app.schemas.room import RoomCreate, RoomResponse, RoomJoinResponse
+from fastapi import Request
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -67,7 +69,9 @@ async def create_room(
         )
 
 @router.get("/{code}", response_model=RoomJoinResponse)
+@limiter.limit("30/minute")
 async def get_room_info(
+    request: Request,
     code: str,
     db: AsyncSession = Depends(get_db)
 ):
