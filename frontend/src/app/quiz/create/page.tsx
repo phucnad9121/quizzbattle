@@ -127,10 +127,10 @@ export default function Page() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="mb-12">
+        <div className="mb-8 md:mb-12">
           <Link
             href="/dashboard"
-            className="inline-flex items-center text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors mb-6 group"
+            className="inline-flex items-center text-[10px] md:text-sm font-black uppercase tracking-widest text-zinc-500 hover:text-indigo-400 transition-colors mb-4 md:mb-6 group"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Quay lại Dashboard
@@ -138,19 +138,19 @@ export default function Page() {
           <div className="space-y-3">
              <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Khởi tạo</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-indigo-300">Khởi tạo</span>
              </div>
-             <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
+             <h1 className="text-3xl sm:text-4xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
                 Tạo <span className="text-indigo-500">Bí Kíp</span> Mới
              </h1>
-             <p className="text-zinc-400 font-medium text-lg">Bắt đầu bằng cách điền thông tin cơ bản cho bộ câu hỏi của bạn.</p>
+             <p className="text-zinc-400 font-medium text-base md:text-lg">Bắt đầu bằng cách điền thông tin cơ bản cho bộ câu hỏi của bạn.</p>
           </div>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/5 backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden">
+        <div className="bg-white/5 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden">
           {/* Tab Switcher */}
-          <div className="flex p-2 bg-black/20 m-8 mb-0 rounded-2xl gap-2">
+          <div className="flex p-1.5 md:p-2 bg-black/20 m-4 md:m-8 mb-0 rounded-xl md:rounded-2xl gap-1.5 md:gap-2">
             <button 
               onClick={() => setCreateMode("manual")}
               className={`flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${createMode === "manual" ? "bg-indigo-600 text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"}`}
@@ -167,7 +167,7 @@ export default function Page() {
             </button>
           </div>
 
-          <div className="p-8 sm:p-12">
+          <div className="p-6 md:p-12">
             <Form {...form}>
               <form onSubmit={createMode === "manual" ? form.handleSubmit(onSubmit) : handleImport} className="space-y-10">
                 

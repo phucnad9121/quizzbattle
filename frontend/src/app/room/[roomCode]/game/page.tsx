@@ -268,26 +268,26 @@ export default function GamePage() {
           <Button
             variant="ghost"
             onClick={handleLeave}
-            className="bg-white/5 hover:bg-white/10 text-white rounded-2xl px-4 py-6 border border-white/10 transition-all group"
+            className="bg-white/5 hover:bg-white/10 text-white rounded-xl md:rounded-2xl px-3 md:px-4 py-4 md:py-6 border border-white/10 transition-all group"
           >
-            <ArrowLeft className="mr-2 group-hover:-translate-x-1 transition-transform" size={20} />
-            Thoát
+            <ArrowLeft className="md:mr-2 group-hover:-translate-x-1 transition-transform" size={18} />
+            <span className="hidden md:inline">Thoát</span>
           </Button>
         </div>
 
         {/* Center: Countdown & Question Progress */}
         <div className="flex-1 max-w-4xl mx-auto flex items-center justify-center gap-6 px-4">
-          <div className="flex items-center gap-3 shrink-0 py-2 px-4 bg-white/5 rounded-2xl border border-white/5">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0 py-1.5 md:py-2 px-3 md:px-4 bg-white/5 rounded-xl md:rounded-2xl border border-white/5">
             <button
               onClick={() => playSound('correct')}
-              className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-lg font-black italic shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-indigo-600 flex items-center justify-center text-sm md:text-lg font-black italic shadow-lg shadow-indigo-500/30 active:scale-95 transition-transform"
               title="Test Sound"
             >
               {((currentQuestion?.question_idx ?? 0) + 1)}/{currentQuestion?.total_questions}
             </button>
-            <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter cursor-help" onClick={() => playSound('correct')}>Quizz Battle</span>
-              <span className="text-sm font-black text-white italic uppercase tracking-tighter leading-tight">Live</span>
+            <div className="flex flex-col hidden sm:flex">
+              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter cursor-help" onClick={() => playSound('correct')}>Quizz Battle</span>
+              <span className="text-[10px] md:text-sm font-black text-white italic uppercase tracking-tighter leading-tight">Live</span>
             </div>
           </div>
 
@@ -318,12 +318,12 @@ export default function GamePage() {
               variant="ghost"
               size="icon"
               onClick={toggleMute}
-              className={`w-12 h-12 rounded-2xl border transition-all ${isMuted
+              className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl border transition-all ${isMuted
                 ? 'bg-rose-500/10 border-rose-500/20 text-rose-500'
                 : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
                 }`}
             >
-              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
             </Button>
 
             {isHost && !answerResult && (
@@ -331,15 +331,15 @@ export default function GamePage() {
                 onClick={handleSkipQuestion}
                 className="h-12 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black uppercase italic rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 px-4"
               >
-                <Zap size={18} fill="currentColor" />
+                <Zap size={16} fill="currentColor" />
               </Button>
             )}
           </div>
 
-          <div className="hidden lg:block">
-            <div className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-right">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block mb-1">Mã phòng</span>
-              <span className="text-xl font-black font-mono text-indigo-400">{roomCode}</span>
+          <div className="hidden sm:block">
+            <div className="px-3 md:px-4 py-2 md:py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl md:rounded-2xl text-right">
+              <span className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Mã phòng</span>
+              <span className="text-sm md:xl font-black font-mono text-indigo-400">{roomCode}</span>
             </div>
           </div>
         </div>

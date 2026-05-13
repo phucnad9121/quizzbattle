@@ -20,42 +20,42 @@ export default function DashboardPage() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 mb-20">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 md:gap-12 mb-12 md:mb-20">
           <div className="space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full mb-2">
               <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Quản lý Quiz</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none">
-              Thư viện <span className="text-indigo-500">Quiz</span> <br /> của bạn
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none">
+              Thư viện <span className="text-indigo-500">Quiz</span> <br className="hidden sm:block" /> của bạn
             </h1>
-            <p className="text-zinc-400 font-medium max-w-md text-lg">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
+            <p className="text-zinc-400 font-medium max-w-md text-base md:text-lg">Quản lý và tạo các bộ câu hỏi thú vị để thách đấu mọi người.</p>
           </div>
           
-          <div className="flex flex-col md:flex-row items-center gap-10">
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
             <div className="flex flex-col gap-4 w-full md:w-72">
               <Link
                 href="/quiz/create"
-                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-linear-to-r from-indigo-500 to-purple-600 text-white font-black uppercase italic rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-indigo-500/20"
+                className="group relative inline-flex items-center justify-center gap-4 px-6 md:px-8 py-5 md:py-6 bg-linear-to-r from-indigo-500 to-purple-600 text-white font-black uppercase italic rounded-2xl md:rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-indigo-500/20"
               >
-                <PlusCircle size={24} />
-                <span className="text-lg">Tạo Quiz Mới</span>
+                <PlusCircle size={20} className="md:w-6 md:h-6" />
+                <span className="text-base md:text-lg">Tạo Quiz Mới</span>
               </Link>
 
               <Link
                 href="/room/create"
-                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-emerald-500/20"
+                className="group relative inline-flex items-center justify-center gap-4 px-6 md:px-8 py-5 md:py-6 bg-linear-to-r from-emerald-500 to-green-600 text-white font-black uppercase italic rounded-2xl md:rounded-[3rem] transition-all hover:scale-[1.05] active:scale-95 shadow-xl shadow-emerald-500/20"
               >
-                <PlaySquare size={24} />
-                <span className="text-lg">Tạo Phòng</span>
+                <PlaySquare size={20} className="md:w-6 md:h-6" />
+                <span className="text-base md:text-lg">Tạo Phòng</span>
               </Link>
 
               <Link
                 href="/library"
-                className="group relative inline-flex items-center justify-center gap-4 px-8 py-6 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-[3rem] border border-white/10 backdrop-blur-md transition-all hover:scale-[1.05] active:scale-95"
+                className="group relative inline-flex items-center justify-center gap-4 px-6 md:px-8 py-5 md:py-6 bg-white/5 hover:bg-white/10 text-white font-black uppercase italic rounded-2xl md:rounded-[3rem] border border-white/10 backdrop-blur-md transition-all hover:scale-[1.05] active:scale-95"
               >
-                <BookOpen size={24} className="text-indigo-400" />
-                <span className="text-lg">Thư viện chung</span>
+                <BookOpen size={20} className="text-indigo-400 md:w-6 md:h-6" />
+                <span className="text-base md:text-lg">Thư viện chung</span>
               </Link>
             </div>
 
@@ -63,11 +63,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      {/* Loading State */}
+        {/* Loading State */}
         {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden animate-pulse">
+              <div key={i} className="rounded-2xl md:rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden animate-pulse">
                 <div className="h-48 bg-white/5"></div>
                 <div className="p-6 space-y-4">
                   <div className="h-6 bg-white/10 rounded-lg w-3/4"></div>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
         {/* Data Grid */}
         {!isLoading && !isError && data && data.items.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
             {data.items.map((quiz) => (
               <QuizCard key={quiz.id} quiz={quiz} />
             ))}

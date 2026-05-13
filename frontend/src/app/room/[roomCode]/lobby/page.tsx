@@ -123,7 +123,7 @@ export default function LobbyPage() {
             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Lobby Realtime</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none mb-2">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none mb-2">
             {roomInfo?.quiz_title}
           </h1>
           <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-wider">
@@ -132,9 +132,9 @@ export default function LobbyPage() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center p-6 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] min-w-60">
-          <span className="text-xs font-black text-zinc-500 uppercase tracking-[0.3em] mb-2">Mã Tham Gia</span>
-          <span className="text-6xl font-black font-mono tracking-[0.2em] text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]">
+        <div className="flex flex-col items-center p-4 md:p-6 bg-white/5 backdrop-blur-2xl rounded-3xl md:rounded-[2.5rem] border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] min-w-40 md:min-w-60">
+          <span className="text-[10px] md:text-xs font-black text-zinc-500 uppercase tracking-[0.3em] mb-1 md:mb-2">Mã Tham Gia</span>
+          <span className="text-4xl md:text-6xl font-black font-mono tracking-[0.2em] text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]">
             {roomCode}
           </span>
         </div>
@@ -211,7 +211,7 @@ export default function LobbyPage() {
           </div>
 
           {/* Chat Widget */}
-          <div className="w-full lg:w-80 xl:w-96 h-[500px] shrink-0 sticky top-24">
+          <div className="w-full lg:w-80 xl:w-96 h-[400px] md:h-[500px] shrink-0 lg:sticky top-24">
             <ChatPanel sendMessage={sendMessage} isWidget />
           </div>
         </div>
