@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Users, Play, Crown, LogOut, Wifi, WifiOff, ArrowLeft } from "lucide-react";
 import ChatPanel from "@/components/game/ChatPanel";
 import ConnectionBanner from "@/components/game/ConnectionBanner";
+import { PlayerListSkeleton } from "@/components/game/PlayerListSkeleton";
 
 export default function LobbyPage() {
   const params = useParams();
@@ -173,42 +174,46 @@ export default function LobbyPage() {
 
         <div className="flex flex-col lg:flex-row gap-8 w-full mb-32 items-start">
           {/* Players Grid */}
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {players.map((player) => (
-              <Card 
-                key={player.user_id} 
-                className="bg-white/5 border-white/10 backdrop-blur-md overflow-hidden hover:border-indigo-500/50 transition-all duration-300 group hover:-translate-y-1 rounded-3xl"
-              >
-                <CardContent className="p-6 flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-3xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-indigo-500/20 group-hover:rotate-12 transition-transform duration-300">
-                      {player.display_name.charAt(0).toUpperCase()}
-                    </div>
-                    {player.user_id === hostId && (
-                      <div className="absolute -top-2 -right-2 bg-yellow-500 p-1.5 rounded-full shadow-lg border-2 border-black">
-                        <Crown size={12} className="text-black fill-black" />
+          {wsStatus === "connecting" || players.length === 0 ? (
+            <PlayerListSkeleton />
+          ) : (
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {players.map((player) => (
+                <Card 
+                  key={player.user_id} 
+                  className="bg-white/5 border-white/10 backdrop-blur-md overflow-hidden hover:border-indigo-500/50 transition-all duration-300 group hover:-translate-y-1 rounded-3xl"
+                >
+                  <CardContent className="p-6 flex flex-col items-center gap-3">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-3xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-indigo-500/20 group-hover:rotate-12 transition-transform duration-300">
+                        {player.display_name.charAt(0).toUpperCase()}
                       </div>
-                    )}
+                      {player.user_id === hostId && (
+                        <div className="absolute -top-2 -right-2 bg-yellow-500 p-1.5 rounded-full shadow-lg border-2 border-black">
+                          <Crown size={12} className="text-black fill-black" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-black text-sm text-center truncate w-full uppercase tracking-tight">
+                      {player.display_name}
+                    </span>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {/* Empty slots placeholders */}
+              {Array.from({ length: Math.max(0, 4 - (players.length % 4 || 4)) }).map((_, i) => (
+                <div 
+                  key={`empty-${i}`} 
+                  className="border-2 border-dashed border-white/50 rounded-3xl p-6 flex items-center justify-center opacity-40 min-h-[140px]"
+                >
+                  <div className="w-10 h-10 rounded-full border-2 border-white/50 flex items-center justify-center">
+                    <span className="text-white/50 font-black text-lg">?</span>
                   </div>
-                  <span className="font-black text-sm text-center truncate w-full uppercase tracking-tight">
-                    {player.display_name}
-                  </span>
-                </CardContent>
-              </Card>
-            ))}
-            
-            {/* Empty slots placeholders */}
-            {Array.from({ length: Math.max(0, 4 - (players.length % 4 || 4)) }).map((_, i) => (
-              <div 
-                key={`empty-${i}`} 
-                className="border-2 border-dashed border-white/50 rounded-3xl p-6 flex items-center justify-center opacity-40 min-h-[140px]"
-              >
-                <div className="w-10 h-10 rounded-full border-2 border-white/50 flex items-center justify-center">
-                  <span className="text-white/50 font-black text-lg">?</span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Chat Widget */}
           <div className="w-full lg:w-80 xl:w-96 h-[400px] md:h-[500px] shrink-0 lg:sticky top-24">

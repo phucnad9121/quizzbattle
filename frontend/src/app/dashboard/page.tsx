@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PlusCircle, PlaySquare, BookOpen } from "lucide-react";
 import { useQuizzes } from "@/hooks/useQuizzes";
 import { QuizCard } from "@/components/quiz/QuizCard";
+import { QuizCardSkeleton } from "@/components/quiz/QuizCardSkeleton";
 import { JoinRoomWidget } from "@/components/room/JoinRoomWidget";
 
 export default function DashboardPage() {
@@ -67,16 +68,7 @@ export default function DashboardPage() {
         {isLoading && (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="rounded-2xl md:rounded-[2rem] bg-white/5 border border-white/10 overflow-hidden animate-pulse">
-                <div className="h-48 bg-white/5"></div>
-                <div className="p-6 space-y-4">
-                  <div className="h-6 bg-white/10 rounded-lg w-3/4"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-white/5 rounded-md w-full"></div>
-                    <div className="h-4 bg-white/5 rounded-md w-2/3"></div>
-                  </div>
-                </div>
-              </div>
+              <QuizCardSkeleton key={i} />
             ))}
           </div>
         )}

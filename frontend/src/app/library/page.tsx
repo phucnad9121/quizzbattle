@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { PublicQuizCard } from "@/components/quiz/PublicQuizCard";
+import { QuizCardSkeleton } from "@/components/quiz/QuizCardSkeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, BookOpen, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
@@ -74,9 +75,10 @@ export default function LibraryPage() {
 
         {/* Content */}
         {isLoading ? (
-          <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
-            <p className="text-zinc-500 font-black uppercase tracking-widest animate-pulse">Đang lục tìm kho báu...</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <QuizCardSkeleton key={i} />
+            ))}
           </div>
         ) : data?.items.length === 0 ? (
           <div className="h-[400px] flex flex-col items-center justify-center text-center p-8 bg-white/5 border border-white/10 rounded-[3rem] backdrop-blur-xl">

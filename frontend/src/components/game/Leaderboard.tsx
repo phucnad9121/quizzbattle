@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from "@/lib/utils";
 import { Trophy, Medal, Award, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LeaderboardSkeleton } from "./LeaderboardSkeleton";
 
 interface LeaderboardEntry {
   user_id: string;
@@ -132,14 +133,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
         </AnimatePresence>
 
         {sortedEntries.length === 0 && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 bg-white/5 rounded-[2.5rem] border-2 border-dashed border-white/5"
-          >
-            <User className="w-12 h-12 text-zinc-700 mx-auto mb-4 opacity-20" />
-            <p className="text-zinc-500 font-black uppercase italic tracking-widest text-xs">Đang cập nhật bảng điểm...</p>
-          </motion.div>
+          <LeaderboardSkeleton />
         )}
       </div>
     </div>
