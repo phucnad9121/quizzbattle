@@ -13,23 +13,29 @@ from app.db.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, summary="Đăng ký tài khoản")
 @limiter.limit("5/minute")
 async def register(
     request: Request,
     data: RegisterRequest,
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
+    """
+    Tạo tài khoản người chơi mới.
+    """
     return await register_user(session, data)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, summary="Đăng nhập")
 @limiter.limit("10/minute")
 async def login(
     request: Request,
     data: LoginRequest,
     session: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
+    """
+    Xác thực người dùng và trả về bộ Access/Refresh tokens.
+    """
     return await login_user(session, data)
 
 

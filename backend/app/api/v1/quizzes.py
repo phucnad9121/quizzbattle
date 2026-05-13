@@ -14,13 +14,16 @@ from app.db.models.user import User
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
-@router.get("/public", response_model=QuizListResponse)
+@router.get("/public", response_model=QuizListResponse, summary="Lấy danh sách Quiz công khai")
 async def get_public_quizzes(
-    search: str | None = Query(None),
-    sort: str = Query("newest"),
+    search: str | None = Query(None, description="Từ khóa tìm kiếm tiêu đề"),
+    sort: str = Query("newest", description="Sắp xếp theo: newest, oldest"),
     pagination: PaginationParams = Depends(paginate),
     session: AsyncSession = Depends(get_db),
 ):
+    """
+    Truy vấn danh sách các bộ câu hỏi được cộng đồng chia sẻ công khai.
+    """
     repo = QuizRepository(session)
     items, total = await repo.get_public(
         page=pagination.page, 
@@ -35,24 +38,30 @@ async def get_public_quizzes(
         "size": pagination.size
     }
 
-@router.post("", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuizResponse, status_code=status.HTTP_201_CREATED, summary="Tạo bộ câu hỏi mới")
 async def create_quiz(
     data: QuizCreate,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ):
+    """
+    Tạo một bộ câu hỏi mới cho người dùng hiện tại.
+    """
     repo = QuizRepository(session)
     quiz = await repo.create(owner_id=current_user.id, data=data.model_dump())
     await session.commit()
     await session.refresh(quiz, ["questions"]) # To ensure question_count property works
     return quiz
 
-@router.get("", response_model=QuizListResponse)
+@router.get("", response_model=QuizListResponse, summary="Lấy danh sách Quiz cá nhân")
 async def get_quizzes(
     pagination: PaginationParams = Depends(paginate),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ):
+    """
+    Lấy toàn bộ danh sách Quiz mà người dùng hiện tại đã tạo.
+    """
     repo = QuizRepository(session)
     items, total = await repo.get_by_owner(user_id=current_user.id, page=pagination.page, size=pagination.size)
     return {

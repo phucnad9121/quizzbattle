@@ -26,11 +26,29 @@ def _parse_allowed_origins() -> list[str]:
     return [origin for origin in (origins + extra_origins) if origin]
 
 
+tags_metadata = [
+    {"name": "Auth", "description": "Xác thực người chơi (Đăng nhập, Đăng ký, Đăng xuất)"},
+    {"name": "Users", "description": "Quản lý thông tin người dùng"},
+    {"name": "Quizzes", "description": "Tạo và quản lý bộ câu hỏi"},
+    {"name": "Rooms", "description": "Quản lý phòng game và kết quả"},
+    {"name": "WebSocket", "description": "Giao thức Real-time cho game (không hiển thị trong REST docs)"},
+]
+
 app = FastAPI(
     title="QuizBattle API",
-    version="0.1.0",
+    description="""
+🚀 **QuizBattle API** cung cấp hệ thống backend cho trò chơi đố vui trực tuyến thời gian thực.
+
+## Tính năng chính
+* 🔐 **Xác thực**: JWT Auth với Access/Refresh tokens.
+* 📝 **Quản lý Quiz**: CRUD quiz, câu hỏi và hình ảnh.
+* 🎮 **Game Engine**: Điều phối trận đấu qua WebSocket.
+* 📊 **Thống kê**: Bảng xếp hạng và kết quả chi tiết.
+""",
+    version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=tags_metadata,
 )
 
 app.add_middleware(

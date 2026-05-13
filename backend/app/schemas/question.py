@@ -14,6 +14,23 @@ class QuestionCreate(BaseModel):
     image_url: Optional[str] = None
     options: list[OptionCreate]
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "question_text": "Ai là người sáng lập ra nhà Trần?",
+                "question_type": "multiple_choice",
+                "time_limit_secs": 30,
+                "points": 100,
+                "options": [
+                    {"option_text": "Trần Thái Tông", "is_correct": True},
+                    {"option_text": "Trần Hưng Đạo", "is_correct": False},
+                    {"option_text": "Trần Quốc Toản", "is_correct": False},
+                    {"option_text": "Trần Quang Khải", "is_correct": False}
+                ]
+            }
+        }
+    }
+
     @model_validator(mode='after')
     def validate_options(self) -> 'QuestionCreate':
         correct_count = sum(1 for opt in self.options if opt.is_correct)
@@ -56,12 +73,23 @@ class OptionResponse(BaseModel):
     is_correct: Optional[bool] = None
 
 class QuestionResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    question_text: str
-    question_type: str
-    time_limit_secs: int
-    points: int
-    order_index: int
     image_url: Optional[str] = None
     options: list[OptionResponse]
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "id": "e44be076-8946-4f65-8205-715950071595",
+                "question_text": "Ai là người sáng lập ra nhà Trần?",
+                "question_type": "multiple_choice",
+                "time_limit_secs": 30,
+                "points": 100,
+                "order_index": 0,
+                "options": [
+                    {"id": "uuid-1", "option_text": "Trần Thái Tông", "order_index": 0, "is_correct": True},
+                    {"id": "uuid-2", "option_text": "Trần Hưng Đạo", "order_index": 1, "is_correct": False}
+                ]
+            }
+        }
+    )

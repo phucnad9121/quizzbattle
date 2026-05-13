@@ -15,7 +15,7 @@ from fastapi import Request
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
-@router.post("", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RoomResponse, status_code=status.HTTP_201_CREATED, summary="Tạo phòng chơi")
 async def create_room(
     room_data: RoomCreate,
     db: AsyncSession = Depends(get_db),
@@ -68,7 +68,7 @@ async def create_room(
             detail=str(e)
         )
 
-@router.get("/{code}", response_model=RoomJoinResponse)
+@router.get("/{code}", response_model=RoomJoinResponse, summary="Kiểm tra mã phòng")
 @limiter.limit("30/minute")
 async def get_room_info(
     request: Request,
@@ -120,7 +120,7 @@ async def get_room_info(
         "player_count": player_count
     }
 
-@router.get("/{session_id_or_code}/results")
+@router.get("/{session_id_or_code}/results", summary="Lấy kết quả trận đấu")
 async def get_session_results(
     session_id_or_code: str,
     db: AsyncSession = Depends(get_db)
