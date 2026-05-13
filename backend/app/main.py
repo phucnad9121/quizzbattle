@@ -2,9 +2,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.router import api_router
 from app.core.config import settings
-from slowapi import _rate_limit_exceeded_handler
+from app.core.exceptions import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+    rate_limit_exceeded_handler,
+)
 from slowapi.errors import RateLimitExceeded
 from app.infrastructure.limiter import limiter
 
@@ -35,7 +42,13 @@ app.add_middleware(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Standardized Rate Limit handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Custom Global Handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(api_router, prefix="/api/v1")
 
