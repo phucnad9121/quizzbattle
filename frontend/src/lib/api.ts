@@ -42,19 +42,32 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
   const typedConfig = config as RetryConfig;
-  const { accessToken } = useAuthStore.getState();
+  
+  // Lấy trạng thái hiện tại
+  let state = useAuthStore.getState();
+  
+  // Nếu đang trong quá trình khởi tạo (isLoading) mà chưa có token
+  // chúng ta sẽ đợi một chút để tránh việc gửi request thiếu Header
+  if (state.isLoading && !state.accessToken && !typedConfig._skipRefresh) {
+    // Đợi tối đa 2 giây (check mỗi 100ms)
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      state = useAuthStore.getState();
+      if (state.accessToken || !state.isLoading) break;
+    }
+  }
+
+  const accessToken = state.accessToken;
 
   if (config.headers?.Authorization) {
     return config;
   }
 
-  if (accessToken && !typedConfig._skipRefresh) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${accessToken}`,
-    };
+  // Chèn token nếu hợp lệ
+  if (accessToken && typeof accessToken === "string" && accessToken !== "undefined" && accessToken !== "null") {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
   return config;
@@ -78,9 +91,10 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const { refreshToken } = useAuthStore.getState();
+    const { refreshToken, logout, setTokens } = useAuthStore.getState();
+    
     if (!refreshToken) {
-      useAuthStore.getState().logout();
+      logout("No refresh token available");
       if (typeof window !== "undefined") {
         window.location.href = "/login";
       }
@@ -97,15 +111,15 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const response = await apiClient.post(
-        "/auth/refresh",
+      // Sử dụng axios trực tiếp để tránh interceptor vòng lặp
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
         null,
         {
           headers: {
             Authorization: `Bearer ${refreshToken}`,
           },
-          _skipRefresh: true,
-        } as RetryConfig
+        }
       );
 
       const { access_token, refresh_token } = response.data as {
@@ -113,7 +127,7 @@ apiClient.interceptors.response.use(
         refresh_token: string;
       };
 
-      useAuthStore.getState().setTokens({
+      setTokens({
         accessToken: access_token,
         refreshToken: refresh_token,
       });
@@ -127,10 +141,27 @@ apiClient.interceptors.response.use(
 
       return apiClient(originalConfig);
     } catch (refreshError) {
+      // KIỂM TRA QUAN TRỌNG: Nếu trong lúc ta đang refresh mà một request khác 
+      // đã refresh thành công và cập nhật token mới vào Store rồi, 
+      // thì ta KHÔNG được logout.
+      const currentState = useAuthStore.getState();
+      if (currentState.refreshToken && currentState.refreshToken !== refreshToken) {
+        console.log("[Auth] Concurrent refresh detected, retrying with new token...");
+        processQueue(null, currentState.accessToken);
+        if (originalConfig) {
+          originalConfig.headers.Authorization = `Bearer ${currentState.accessToken}`;
+          return apiClient(originalConfig);
+        }
+      }
+
       processQueue(refreshError, null);
-      useAuthStore.getState().logout();
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+      
+      // CHỈ logout nếu server thực sự từ chối token (401/403)
+      if (axios.isAxiosError(refreshError) && (refreshError.response?.status === 401 || refreshError.response?.status === 403)) {
+        logout("Refresh token expired or invalid");
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
       }
       return Promise.reject(refreshError);
     } finally {

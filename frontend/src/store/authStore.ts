@@ -29,71 +29,58 @@ export type AuthState = AuthTokens & {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   setUser: (user: AuthUser | null) => void;
   setTokens: (tokens: AuthTokens) => void;
-  logout: () => void;
+  logout: (reason?: string) => void;
   initialize: () => Promise<void>;
 };
 
-const setAccessTokenCookie = (token: string | null) => {
-  if (typeof document === "undefined") {
-    return;
+const setAuthCookies = (accessToken: string | null, refreshToken: string | null) => {
+  if (typeof document === "undefined") return;
+
+  const base = "Path=/";
+  if (!accessToken) {
+    document.cookie = `qb_access_token=; Max-Age=0; ${base}`;
+  } else {
+    document.cookie = `qb_access_token=${accessToken}; Max-Age=1800; ${base}`;
   }
 
-  if (!token) {
-    document.cookie = "access_token=; Path=/; Max-Age=0; SameSite=Lax";
-    return;
+  if (!refreshToken) {
+    document.cookie = `qb_refresh_token=; Max-Age=0; ${base}`;
+  } else {
+    document.cookie = `qb_refresh_token=${refreshToken}; Max-Age=604800; ${base}`;
   }
-
-  document.cookie = `access_token=${token}; Path=/; Max-Age=1800; SameSite=Lax`;
 };
 
 const decodeJwt = (token: string): { exp?: number } | null => {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    return null;
-  }
-
-  const payload = parts[1]
-    .replace(/-/g, "+")
-    .replace(/_/g, "/")
-    .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
-
   try {
-    const json =
-      typeof window !== "undefined" && "atob" in window
-        ? window.atob(payload)
-        : Buffer.from(payload, "base64").toString("utf-8");
-    return JSON.parse(json) as { exp?: number };
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload;
   } catch {
     return null;
   }
 };
 
 const isTokenExpired = (token: string | null) => {
-  if (!token) {
-    return true;
-  }
+  if (!token) return true;
   const payload = decodeJwt(token);
-  if (!payload?.exp) {
-    return true;
-  }
-  return Date.now() / 1000 >= payload.exp;
+  if (!payload?.exp) return true;
+  return Date.now() / 1000 >= payload.exp - 10; // Margin 10s
 };
 
 const refreshTokens = async (refreshToken: string): Promise<TokenPair> => {
   const response = await axios.post<TokenPair>(
     `${API_BASE_URL}/auth/refresh`,
     null,
-    {
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
-    }
+    { headers: { Authorization: `Bearer ${refreshToken}` } }
   );
-
   return response.data;
 };
+
+let isInitRunning = false;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -102,71 +89,127 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true,
+      isInitializing: false,
       setUser: (user) => set({ user }),
       setTokens: (tokens) =>
         set(() => {
-          setAccessTokenCookie(tokens.accessToken);
+          setAuthCookies(tokens.accessToken, tokens.refreshToken);
           return {
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
             isAuthenticated: Boolean(tokens.accessToken),
           };
         }),
-      logout: () => {
+      logout: (reason) => {
+        console.warn(`[Auth] Logout called. Reason: ${reason || "none"}`);
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
+          isInitializing: false,
         });
-        setAccessTokenCookie(null);
+        setAuthCookies(null, null);
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(STORAGE_KEY);
         }
       },
       initialize: async () => {
-        if (typeof window === "undefined") {
-          return;
-        }
+        if (typeof window === "undefined" || isInitRunning) return;
 
-        set({ isLoading: true });
-        await useAuthStore.persist.rehydrate();
-
-        const { accessToken, refreshToken } = get();
-
-        if (accessToken && !isTokenExpired(accessToken)) {
-          setAccessTokenCookie(accessToken);
-          set({ isAuthenticated: true, isLoading: false });
-          return;
-        }
-
-        if (!refreshToken) {
-          set({ isAuthenticated: false, isLoading: false, accessToken: null });
-          return;
-        }
-
+        isInitRunning = true;
+        set({ isInitializing: true, isLoading: true });
+        
         try {
-          const tokenPair = await refreshTokens(refreshToken);
-          setAccessTokenCookie(tokenPair.access_token);
-          set({
-            accessToken: tokenPair.access_token,
-            refreshToken: tokenPair.refresh_token,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        } catch {
-          set({
-            user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-          if (typeof window !== "undefined") {
-            window.localStorage.removeItem(STORAGE_KEY);
+          await useAuthStore.persist.rehydrate();
+          
+          let { accessToken, refreshToken } = get();
+
+          // Fallback manual read
+          if (!accessToken || !refreshToken) {
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (parsed.state) {
+                  accessToken = accessToken || parsed.state.accessToken;
+                  refreshToken = refreshToken || parsed.state.refreshToken;
+                }
+              } catch (e) {
+                console.error("[Auth] LocalStorage fallback failed", e);
+              }
+            }
+
+            // Cookie fallback
+            if (!accessToken || !refreshToken) {
+              const getCookie = (name: string) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop()?.split(";").shift();
+                return null;
+              };
+
+              const cookieAccess = getCookie("qb_access_token");
+              const cookieRefresh = getCookie("qb_refresh_token");
+
+              if (cookieAccess || cookieRefresh) {
+                accessToken = accessToken || cookieAccess || null;
+                refreshToken = refreshToken || cookieRefresh || null;
+              }
+            }
+
+            if (accessToken || refreshToken) {
+              set({ accessToken, refreshToken });
+            }
           }
+
+          if (isTokenExpired(accessToken) && refreshToken) {
+            try {
+              const tokenPair = await refreshTokens(refreshToken);
+              accessToken = tokenPair.access_token;
+              refreshToken = tokenPair.refresh_token;
+              setAuthCookies(accessToken, refreshToken);
+              set({ accessToken, refreshToken, isAuthenticated: true });
+            } catch (err) {
+              console.error("[Auth] Token refresh failed during init", err);
+              get().logout("Refresh failed during init");
+              return;
+            }
+          }
+
+          if (accessToken && !isTokenExpired(accessToken)) {
+            setAuthCookies(accessToken, refreshToken);
+            set({ accessToken, refreshToken, isAuthenticated: true });
+            
+            try {
+              const response = await axios.get<AuthUser>(`${API_BASE_URL}/users/me`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              });
+              set({ user: response.data, isLoading: false, isInitializing: false });
+            } catch (error) {
+              console.error("[Auth] Profile fetch failed", error);
+              if (axios.isAxiosError(error) && error.response?.status === 401) {
+                get().logout("Unauthorized fetch profile");
+              } else {
+                set({ isLoading: false, isInitializing: false });
+              }
+            }
+          } else {
+            set({ 
+              isAuthenticated: false, 
+              isLoading: false, 
+              isInitializing: false,
+              user: null, 
+              accessToken: null, 
+              refreshToken: null 
+            });
+            setAuthCookies(null, null);
+          }
+        } catch (error) {
+          console.error("[Auth] Critical initialization error", error);
+          set({ isLoading: false, isInitializing: false, isAuthenticated: false });
         }
       },
     }),
@@ -176,6 +219,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated, // LƯU THÊM TRẠNG THÁI NÀY
       }),
     }
   )

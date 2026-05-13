@@ -7,17 +7,25 @@ const isProtectedPath = (pathname: string) =>
 
 const isAuthPath = (pathname: string) => pathname === "/login" || pathname === "/register";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const accessToken = request.cookies.get("access_token")?.value;
+  const accessToken = request.cookies.get("qb_access_token")?.value;
+  const refreshToken = request.cookies.get("qb_refresh_token")?.value;
 
-  if (!accessToken && isProtectedPath(pathname)) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.search = `?callbackUrl=${encodeURIComponent(`${pathname}${search}`)}`;
-    return NextResponse.redirect(loginUrl);
+  // 1. Nếu đang vào trang bảo mật
+  if (isProtectedPath(pathname)) {
+    // Nếu không có Access Token VÀ không có Refresh Token -> Chuyển về Login
+    if (!accessToken && !refreshToken) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = `?callbackUrl=${encodeURIComponent(`${pathname}${search}`)}`;
+      return NextResponse.redirect(loginUrl);
+    }
+    // Nếu có ít nhất 1 trong 2 -> Cho phép đi qua, Client-side sẽ xử lý tiếp
+    return NextResponse.next();
   }
 
+  // 2. Nếu đã có Access Token mà cố vào trang Auth (Login/Register)
   if (accessToken && isAuthPath(pathname)) {
     const dashboardUrl = request.nextUrl.clone();
     dashboardUrl.pathname = "/dashboard";

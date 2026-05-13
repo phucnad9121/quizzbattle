@@ -16,7 +16,7 @@ QuizzBattle là một nền tảng trực tuyến hỗ trợ tổ chức các tr
 
 ### Hệ thống Backend
 - **Ngôn ngữ**: Python 3.11+
-- **Quản lý môi trường**: Conda / Virtualenv
+- **Quản lý môi trường**: miniconda 
 - **Framework**: FastAPI (Asynchronous)
 - **Cơ sở dữ liệu**: PostgreSQL & Redis
 - **ORM**: SQLAlchemy (Alembic cho migration)
@@ -89,4 +89,4 @@ Tài liệu API được cung cấp thông qua giao diện Swagger UI, bao gồm
 - **Real-time Gateway**: Các sự kiện truyền tải qua WebSocket.
 
 ---
-© 2024 QuizzBattle Team. All rights reserved.
+© 2026 QuizzBattle DanDaoIT. All rights reserved.

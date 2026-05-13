@@ -29,25 +29,7 @@ export function Navbar() {
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
 
-  useEffect(() => {
-    if (!accessToken || user || isFetchingUser) {
-      return;
-    }
-
-    const fetchUser = async () => {
-      setIsFetchingUser(true);
-      try {
-        const response = await apiClient.get("/users/me");
-        setUser(response.data);
-      } catch {
-        // Ignore fetch errors, user can re-login if needed.
-      } finally {
-        setIsFetchingUser(false);
-      }
-    };
-
-    void fetchUser();
-  }, [accessToken, isFetchingUser, setUser, user]);
+  // Removed redundant fetchUser logic, now handled by AuthInitializer/authStore
 
   const handleLogout = async () => {
     if (isLoggingOut) {

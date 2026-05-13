@@ -19,14 +19,20 @@ async def get_current_user(
     session: AsyncSession = Depends(get_db),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing access token",
+        )
+
+    if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing access token",
         )
 
     token = authorization.removeprefix("Bearer ").strip()
-    if not token:
+    if not token or token == "undefined" or token == "null":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing access token",
