@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 import type { ConnectionStatus, WsMessage } from "@/types/game";
 
 const MAX_RETRIES = 5;
-const RETRY_DELAYS_MS = [1000, 2000, 4000, 4000, 4000];
+const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
 
 const buildWsUrl = (roomCode: string, token: string) => {
 	const base = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
@@ -25,7 +25,6 @@ export const useWebSocket = (roomCode: string | null) => {
 	const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const retryCountRef = useRef(0);
 	const manualCloseRef = useRef(false);
-	const toastShownRef = useRef(false);
 
 	const clearReconnectTimer = () => {
 		if (reconnectTimerRef.current) {
@@ -47,17 +46,23 @@ export const useWebSocket = (roomCode: string | null) => {
 
 
 	const scheduleReconnect = useCallback(() => {
-		if (manualCloseRef.current) {
-			return;
-		}
+		if (manualCloseRef.current) return;
 
 		if (retryCountRef.current >= MAX_RETRIES) {
+			setStatus("failed");
+			toast({
+				title: "Lỗi kết nối",
+				description: "Không thể kết nối lại sau 5 lần thử. Vui lòng reload trang.",
+				variant: "destructive",
+			});
 			return;
 		}
 
 		const delay = RETRY_DELAYS_MS[retryCountRef.current] ?? 4000;
 		retryCountRef.current += 1;
-
+		
+		setStatus("reconnecting");
+		
 		clearReconnectTimer();
 		reconnectTimerRef.current = setTimeout(() => {
 			connectRef.current();
@@ -75,14 +80,17 @@ export const useWebSocket = (roomCode: string | null) => {
 		clearReconnectTimer();
 		closeSocket();
 
-		setStatus("connecting");
+		if (retryCountRef.current === 0) {
+			setStatus("connecting");
+		}
+		
 		const url = buildWsUrl(roomCode, accessToken);
 		const ws = new WebSocket(url);
 		wsRef.current = ws;
 
 		ws.onopen = () => {
+			console.log("WS Connected!");
 			retryCountRef.current = 0;
-			toastShownRef.current = false;
 			setStatus("connected");
 		};
 
@@ -98,23 +106,15 @@ export const useWebSocket = (roomCode: string | null) => {
 		};
 
 		ws.onerror = () => {
-			if (!toastShownRef.current) {
-				toastShownRef.current = true;
-				toast({
-					title: "Mất kết nối, đang thử lại...",
-				});
-			}
+			console.error("WS Error");
 		};
 
 		ws.onclose = () => {
-			setStatus("disconnected");
-			if (!toastShownRef.current && !manualCloseRef.current) {
-				toastShownRef.current = true;
-				toast({
-					title: "Mất kết nối, đang thử lại...",
-				});
+			console.warn("WS Closed");
+			if (!manualCloseRef.current) {
+				setStatus("disconnected");
+				scheduleReconnect();
 			}
-			scheduleReconnect();
 		};
 	}, [accessToken, roomCode, scheduleReconnect]);
 

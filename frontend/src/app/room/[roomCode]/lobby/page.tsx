@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Users, Play, Crown, LogOut, Wifi, WifiOff, ArrowLeft } from "lucide-react";
 import ChatPanel from "@/components/game/ChatPanel";
+import ConnectionBanner from "@/components/game/ConnectionBanner";
 
 export default function LobbyPage() {
   const params = useParams();
@@ -96,6 +97,7 @@ export default function LobbyPage() {
 
   return (
     <div className="flex flex-col bg-[#020617] min-h-screen text-white p-6 relative overflow-hidden">
+      <ConnectionBanner status={wsStatus} />
       {/* Fixed Back Button for Testing */}
       <div className="fixed top-6 left-6 z-50">
         <Button 
@@ -151,10 +153,20 @@ export default function LobbyPage() {
             </div>
           </div>
           
-          <div className={`flex items-center gap-3 px-4 py-2 rounded-full border ${wsStatus === "connected" ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+          <div className={`flex items-center gap-3 px-4 py-2 rounded-full border ${
+            wsStatus === "connected" 
+              ? 'bg-green-500/10 border-green-500/20 text-green-400' 
+              : wsStatus === "reconnecting"
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
             {wsStatus === "connected" ? <Wifi size={16} /> : <WifiOff size={16} />}
             <span className="text-xs font-black uppercase tracking-tighter">
-              {wsStatus === "connected" ? "Máy chủ: Tốt" : "Mất kết nối"}
+              {wsStatus === "connected" 
+                ? "Máy chủ: Tốt" 
+                : wsStatus === "reconnecting"
+                  ? "Đang thử lại..."
+                  : "Mất kết nối"}
             </span>
           </div>
         </div>

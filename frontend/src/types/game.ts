@@ -1,4 +1,4 @@
-export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected" | "failed";
 
 export type Participant = {
 	user_id: string;

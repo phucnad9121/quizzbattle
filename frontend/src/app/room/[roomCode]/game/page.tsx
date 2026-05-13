@@ -11,6 +11,7 @@ import AnswerButtons from "@/components/game/AnswerButtons";
 import Leaderboard from "@/components/game/Leaderboard";
 import ResultOverlay from "@/components/game/ResultOverlay";
 import { Button } from "@/components/ui/button";
+import ConnectionBanner from "@/components/game/ConnectionBanner";
 import { useAuthStore } from "@/store/authStore";
 import { apiClient } from "@/lib/api";
 import { Loader2, ArrowLeft, Zap, RotateCcw, Volume2, VolumeX } from "lucide-react";
@@ -36,7 +37,7 @@ export default function GamePage() {
     quizId
   } = useGameStore();
 
-  const { sendMessage } = useWebSocket(roomCode);
+  const { status: wsStatus, sendMessage } = useWebSocket(roomCode);
   const [transitionCountdown, setTransitionCountdown] = useState<number | null>(null);
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -253,6 +254,7 @@ export default function GamePage() {
 
   return (
     <div className="flex flex-col bg-[#020617] min-h-screen text-white relative overflow-hidden font-sans">
+      <ConnectionBanner status={wsStatus} />
       {/* Decorative background */}
       <div className="absolute inset-0 pointer-events-none opacity-30">
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />

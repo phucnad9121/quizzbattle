@@ -116,6 +116,10 @@ async def websocket_endpoint(
 
         # 4. Nếu join muộn vào game đang chạy, gửi luôn câu hiện tại để client sync state
         if room.status == "in_progress" and room.current_question_idx >= 0:
+            import time
+            start_ts = await redis.hget(state_key, "question_start_ts")
+            elapsed = time.time() - float(start_ts) if start_ts else 0
+            
             stmt_current = (
                 select(Question)
                 .where(
@@ -127,6 +131,9 @@ async def websocket_endpoint(
             current_res = await db.execute(stmt_current)
             current_question = current_res.scalar_one_or_none()
             if current_question:
+                # Tính thời gian còn lại, không để nhỏ hơn 0
+                remaining = max(0, current_question.time_limit_secs - elapsed)
+                
                 await ws.send_json({
                     "type": "QUESTION_START",
                     "payload": {
@@ -136,7 +143,7 @@ async def websocket_endpoint(
                         "total_questions": int((await redis.hget(state_key, "total_questions")) or 0),
                         "question_text": current_question.question_text,
                         "question_type": current_question.question_type,
-                        "time_limit_secs": current_question.time_limit_secs,
+                        "time_limit_secs": int(remaining), # Gửi thời gian còn lại thực tế
                         "points": current_question.points,
                         "options": [
                             {"id": str(option.id), "option_text": option.option_text}
