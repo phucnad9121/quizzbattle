@@ -44,9 +44,9 @@ export default function ChatPanel({ sendMessage, isWidget = false }: ChatPanelPr
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
-            initial={isWidget ? false : { opacity: 0, y: 20, scale: 0.95 }}
+            initial={isWidget ? undefined : { opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={isWidget ? false : { opacity: 0, y: 20, scale: 0.95 }}
+            exit={isWidget ? undefined : { opacity: 0, y: 20, scale: 0.95 }}
             className={`
               ${isWidget ? "w-full h-full" : "w-80 md:w-96 h-[450px] shadow-2xl"} 
               bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col overflow-hidden

@@ -21,7 +21,7 @@ export function Toaster() {
             {title ? <ToastTitle>{title}</ToastTitle> : null}
             {description ? <ToastDescription>{description}</ToastDescription> : null}
           </div>
-          {action ? <ToastAction {...action} /> : null}
+          {action}
           <ToastClose />
         </Toast>
       ))}

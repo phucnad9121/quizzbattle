@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import type {
 	AnswerAckPayload,
+	ChatMessage,
 	FinalResults,
 	GameOverPayload,
 	LeaderboardEntry,

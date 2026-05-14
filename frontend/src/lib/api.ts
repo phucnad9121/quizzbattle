@@ -1,18 +1,25 @@
-import axios, { AxiosError, type AxiosRequestConfig } from "axios";
+import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig, type AxiosInstance } from "axios";
 
 import { useAuthStore } from "@/store/authStore";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+// Mở rộng interface của Axios để TypeScript không báo lỗi khi build production
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    _retry?: boolean;
+    _skipRefresh?: boolean;
+  }
+  export interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+    _skipRefresh?: boolean;
+  }
+}
 
-type RetryConfig = AxiosRequestConfig & {
-  _retry?: boolean;
-  _skipRefresh?: boolean;
-};
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 type FailedRequest = {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
-  config: RetryConfig;
+  config: AxiosRequestConfig;
 };
 
 let isRefreshing = false;
@@ -43,14 +50,12 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
-  const typedConfig = config as RetryConfig;
-  
   // Lấy trạng thái hiện tại
   let state = useAuthStore.getState();
   
   // Nếu đang trong quá trình khởi tạo (isLoading) mà chưa có token
   // chúng ta sẽ đợi một chút để tránh việc gửi request thiếu Header
-  if (state.isLoading && !state.accessToken && !typedConfig._skipRefresh) {
+  if (state.isLoading && !state.accessToken && !config._skipRefresh) {
     // Đợi tối đa 2 giây (check mỗi 100ms)
     for (let i = 0; i < 20; i++) {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -76,7 +81,7 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalConfig = error.config as RetryConfig | undefined;
+    const originalConfig = error.config as AxiosRequestConfig | undefined;
     const status = error.response?.status;
 
     if (!originalConfig || status !== 401) {
@@ -135,9 +140,9 @@ apiClient.interceptors.response.use(
       processQueue(null, access_token);
 
       originalConfig.headers = {
-        ...originalConfig.headers,
+        ...(originalConfig.headers || {}),
         Authorization: `Bearer ${access_token}`,
-      };
+      } as any;
 
       return apiClient(originalConfig);
     } catch (refreshError) {
@@ -148,7 +153,7 @@ apiClient.interceptors.response.use(
       if (currentState.refreshToken && currentState.refreshToken !== refreshToken) {
         console.log("[Auth] Concurrent refresh detected, retrying with new token...");
         processQueue(null, currentState.accessToken);
-        if (originalConfig) {
+        if (originalConfig && originalConfig.headers) {
           originalConfig.headers.Authorization = `Bearer ${currentState.accessToken}`;
           return apiClient(originalConfig);
         }
