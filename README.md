@@ -20,13 +20,13 @@ QuizzBattle là một nền tảng trực tuyến hỗ trợ tổ chức các tr
 - **Framework**: FastAPI (Asynchronous)
 - **Cơ sở dữ liệu**: PostgreSQL & Redis
 - **ORM**: SQLAlchemy (Alembic cho migration)
-- **Containerization**: Docker & Docker Compose
+- **Containerization**: Docker & Docker Compose (Optimized Multi-stage Build)
 - **Bảo mật**: SlowAPI (Rate Limiting), JWT Authentication
 
 ### Hệ thống Frontend
 - **Framework**: Next.js 16 (React 19)
 - **Ngôn ngữ**: TypeScript
-- **Runtime**: Node.js 18+
+- **Runtime**: Node.js 18+ (Standalone Mode)
 - **Quản lý trạng thái**: Zustand & TanStack Query
 - **Xử lý giao diện**: Tailwind CSS, Framer Motion
 - **Client API**: Axios với cơ chế Interceptors
@@ -35,8 +35,8 @@ QuizzBattle là một nền tảng trực tuyến hỗ trợ tổ chức các tr
 
 Hệ thống hỗ trợ hai phương thức triển khai chính tùy theo mục đích sử dụng:
 
-### 1. Triển khai toàn diện với Docker (Khuyên dùng)
-Phương thức này tự động khởi tạo và kết nối toàn bộ các thành phần: **Backend, Frontend, PostgreSQL và Redis**.
+### 1. Triển khai toàn diện với Docker (Khuyên dùng cho Production)
+Phương thức này sử dụng kiến trúc **Multi-stage Build** để tối ưu hóa dung lượng image (< 300MB) và tăng tính bảo mật bằng cách chạy dưới quyền non-root user.
 
 **Yêu cầu**: Đã cài đặt Docker và Docker Compose.
 
@@ -47,9 +47,12 @@ cd quizzbattle
 
 # Bước 2: Cấu hình môi trường
 # Tạo file .env và .env.local từ các file example tương ứng
+cp .env.example .env
+cp frontend/.env.example frontend/.env.local
 
 # Bước 3: Khởi chạy hệ thống
-docker-compose up --build
+# Lệnh này sẽ build bản image tối ưu và chạy ngầm
+docker-compose up -d --build
 ```
 Hệ thống sẽ sẵn sàng tại:
 - Frontend: `http://localhost:3000`
@@ -80,6 +83,14 @@ npm run dev
 
 ---
 
+## 🆘 Troubleshooting (Xử lý sự cố)
+
+- **Lỗi kết nối Database:** Đảm bảo container Postgres và Redis đã khởi động hoàn toàn (kiểm tra bằng `docker ps`).
+- **Lỗi Login/Session:** Xóa Cookie trình duyệt và đảm bảo `.env` đã cấu hình đúng `JWT_SECRET_KEY`.
+- **Cập nhật code mới:** Nếu bạn sửa code, hãy chạy `docker-compose up -d --build` để Docker nạp lại mã nguồn mới nhất vào image.
+
+---
+
 ## Tài liệu API
 
 Tài liệu API được cung cấp thông qua giao diện Swagger UI, bao gồm chi tiết về các Schema, yêu cầu đầu vào và định dạng phản hồi:
@@ -87,6 +98,12 @@ Tài liệu API được cung cấp thông qua giao diện Swagger UI, bao gồm
 - **Quiz Management**: Các thao tác CRUD dữ liệu bộ câu hỏi.
 - **Room Engine**: Logic khởi tạo và quản lý trạng thái phiên chơi.
 - **Real-time Gateway**: Các sự kiện truyền tải qua WebSocket.
+
+---
+
+## Giấy phép (License)
+
+Dự án được phân phối dưới giấy phép **MIT License**. Bạn có toàn quyền sử dụng, sao chép và sửa đổi cho các mục đích cá nhân hoặc thương mại.
 
 ---
 © 2026 QuizzBattle DanDaoIT. All rights reserved.
