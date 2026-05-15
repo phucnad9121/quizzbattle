@@ -28,6 +28,8 @@ type GameState = {
 	quizId: string | null;
 	hostId: string | null;
 	messages: ChatMessage[];
+	kickedMessage: string | null;
+	isKicked: boolean;
 	setRoomState: (payload: RoomStatePayload) => void;
 	setQuestion: (payload: QuestionStartPayload) => void;
 	setTimeLeft: (seconds: number | null) => void;
@@ -56,6 +58,8 @@ const initialState = {
 	quizId: null,
 	hostId: null,
 	messages: [],
+	kickedMessage: null,
+	isKicked: false,
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -109,5 +113,6 @@ export const useGameStore = create<GameState>((set) => ({
 		set((state) => ({
 			players: state.players.filter((p) => p.user_id !== payload.user_id),
 		})),
+	setKicked: (message: string) => set(() => ({ isKicked: true, kickedMessage: message })),
 	resetGame: () => set(() => ({ ...initialState })),
 }));

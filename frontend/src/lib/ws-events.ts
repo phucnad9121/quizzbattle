@@ -31,6 +31,15 @@ const handlers: Record<string, (payload: unknown) => void> = {
 		useGameStore.getState().setGameOver(payload as GameOverPayload),
 	CHAT_MESSAGE: (payload) =>
 		useGameStore.getState().addMessage(payload as ChatMessage),
+	KICKED: (payload) => {
+		const data = payload as { message: string; target_user_id: string };
+		const { useAuthStore } = require("@/store/authStore");
+		const currentUser = useAuthStore.getState().user;
+		
+		if (currentUser && currentUser.id === data.target_user_id) {
+			useGameStore.getState().setKicked(data.message || "Bạn đã bị kick khỏi phòng.");
+		}
+	},
 	ERROR: (payload) => {
 		const message =
 			typeof payload === "object" && payload && "message" in payload

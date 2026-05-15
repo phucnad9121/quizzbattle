@@ -73,7 +73,9 @@ async def create_room(
 async def get_room_info(
     request: Request,
     code: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Endpoint lấy thông tin phòng chơi để join:
@@ -103,6 +105,13 @@ async def get_room_info(
         raise HTTPException(
             status_code=status.HTTP_410_GONE, 
             detail="Phòng đã kết thúc"
+        )
+        
+    # Kiểm tra xem người chơi có bị ban không
+    if await room_service.is_player_banned(redis, session.room_code, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="BANNED_FROM_ROOM"
         )
         
     # Lấy số lượng người chơi hiện tại

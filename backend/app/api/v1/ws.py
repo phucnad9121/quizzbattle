@@ -46,9 +46,21 @@ async def websocket_endpoint(
 
     logger.warning("WS accepted room=%s user=%s", room_code, current_user.id)
 
+    # 0. Kiểm tra xem người chơi có bị ban không
+    redis = await get_redis()
+    if await room_service.is_player_banned(redis, room_code, current_user.id):
+        logger.warning("WS connection rejected: User is banned. room=%s user=%s", room_code, current_user.id)
+        await ws.accept() # Chấp nhận rồi mới gửi lỗi được
+        await ws.send_json({
+            "type": "ERROR",
+            "payload": {"message": "Bạn đã bị cấm truy cập vào phòng này."}
+        })
+        await ws.close(code=4003)
+        return
+
     # 1. Chấp nhận kết nối và đăng ký vào ConnectionManager
     joined = False
-    await manager.connect(ws, room_code)
+    await manager.connect(ws, room_code, str(current_user.id))
     joined = True
 
     try:
@@ -215,6 +227,30 @@ async def websocket_endpoint(
                                 "timestamp": datetime.now().isoformat()
                             }
                         })
+                
+                elif event_type == "KICK_PLAYER":
+                    payload = data.get("payload", {})
+                    target_id_str = payload.get("target_user_id")
+                    if target_id_str:
+                        try:
+                            target_uuid = uuid.UUID(target_id_str)
+                            success = await room_service.kick_player(
+                                db=db,
+                                redis=redis,
+                                room_code=room_code,
+                                host_id=current_user.id,
+                                target_user_id=target_uuid
+                            )
+                            if not success:
+                                await ws.send_json({
+                                    "type": "ERROR",
+                                    "payload": {"message": "Bạn không có quyền kick người chơi này."}
+                                })
+                        except ValueError:
+                            await ws.send_json({
+                                "type": "ERROR",
+                                "payload": {"message": "ID người chơi không hợp lệ."}
+                            })
             except WebSocketDisconnect:
                 raise
             except Exception as e:

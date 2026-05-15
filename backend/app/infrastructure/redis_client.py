@@ -35,7 +35,16 @@ async def redis_subscriber_task(room_code: str):
         async for message in pubsub.listen():
             if message["type"] == "message":
                 data = json.loads(message["data"])
+                
+                # Broadcast cho tất cả clients trên worker này
                 await manager.broadcast_room(room_code, data)
+                
+                # Nếu là sự kiện KICKED, ngắt kết nối target player nếu họ ở trên worker này
+                if data.get("type") == "KICKED":
+                    payload = data.get("payload", {})
+                    target_id = payload.get("target_user_id")
+                    if target_id:
+                        await manager.disconnect_user(room_code, target_id)
             
             # Tự kết thúc task nếu phòng không còn ai tham gia trên worker này
             if manager.get_connection_count(room_code) == 0:

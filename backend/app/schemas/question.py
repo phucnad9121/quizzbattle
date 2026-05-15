@@ -73,6 +73,12 @@ class OptionResponse(BaseModel):
     is_correct: Optional[bool] = None
 
 class QuestionResponse(BaseModel):
+    id: uuid.UUID
+    question_text: str
+    question_type: str
+    time_limit_secs: int
+    points: int
+    order_index: int
     image_url: Optional[str] = None
     options: list[OptionResponse]
 

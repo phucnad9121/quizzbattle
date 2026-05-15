@@ -7,8 +7,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Zap, ArrowLeft } from "lucide-react";
+import { Loader2, Zap, ArrowLeft, ShieldAlert } from "lucide-react";
 import { AxiosError } from "axios";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 function JoinRoomContent() {
   const router = useRouter();
@@ -17,6 +18,7 @@ function JoinRoomContent() {
 
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
 
   useEffect(() => {
     const urlCode = searchParams.get("code");
@@ -49,6 +51,8 @@ function JoinRoomContent() {
           title: "Lỗi",
           description: "Phòng này đã kết thúc",
         });
+      } else if (axiosError.response?.status === 403 && axiosError.response?.data?.detail === "BANNED_FROM_ROOM") {
+        setIsBanned(true);
       } else {
         toast({
           variant: "destructive",
@@ -148,6 +152,33 @@ function JoinRoomContent() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Banned Modal */}
+      <Dialog open={isBanned} onOpenChange={setIsBanned}>
+        <DialogContent className="bg-[#020617] border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.2)] rounded-[2.5rem] p-8 md:p-12 text-center max-w-md">
+          <DialogHeader>
+            <div className="mx-auto w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-6 border border-amber-500/20">
+              <ShieldAlert className="text-amber-500" size={40} />
+            </div>
+            <DialogTitle className="text-3xl font-black italic uppercase text-white mb-2 leading-tight">
+              Truy cập bị từ chối
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              Bạn đã bị chủ phòng mời rời phòng nên không thể truy cập lại.
+            </p>
+          </div>
+          <DialogFooter className="mt-6 flex justify-center sm:justify-center">
+            <Button 
+              onClick={() => setIsBanned(false)}
+              className="h-16 px-12 rounded-2xl bg-white text-black font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+            >
+              Tôi đã hiểu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

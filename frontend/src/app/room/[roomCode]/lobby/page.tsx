@@ -9,10 +9,12 @@ import { apiClient } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Users, Play, Crown, LogOut, Wifi, WifiOff, ArrowLeft } from "lucide-react";
+import { Loader2, Users, Play, Crown, LogOut, Wifi, WifiOff, ArrowLeft, X } from "lucide-react";
 import ChatPanel from "@/components/game/ChatPanel";
 import ConnectionBanner from "@/components/game/ConnectionBanner";
 import { PlayerListSkeleton } from "@/components/game/PlayerListSkeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function LobbyPage() {
   const params = useParams();
@@ -21,7 +23,7 @@ export default function LobbyPage() {
   const { toast } = useToast();
   
   const { user } = useAuthStore();
-  const { players, status, currentQuestion, resetGame, hostId } = useGameStore();
+  const { players, status, currentQuestion, resetGame, hostId, isKicked, kickedMessage } = useGameStore();
   const { status: wsStatus, sendMessage } = useWebSocket(roomCode);
   
   const [roomInfo, setRoomInfo] = useState<{
@@ -30,6 +32,10 @@ export default function LobbyPage() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Kick state
+  const [isKickConfirmOpen, setIsKickConfirmOpen] = useState(false);
+  const [playerToKick, setPlayerToKick] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -51,6 +57,12 @@ export default function LobbyPage() {
         const res = await apiClient.get(`/rooms/${normalizedCode}`);
         setRoomInfo(res.data);
       } catch (error) {
+        const axiosError = error as AxiosError<{ detail: string }>;
+        if (axiosError.response?.status === 403 && axiosError.response?.data?.detail === "BANNED_FROM_ROOM") {
+          useGameStore.getState().setKicked("Bạn đã bị chủ phòng mời rời phòng nên không thể truy cập lại.");
+          return;
+        }
+        
         toast({
           variant: "destructive",
           title: "Lỗi",
@@ -83,6 +95,19 @@ export default function LobbyPage() {
   const handleLeave = () => {
     resetGame();
     router.push("/dashboard");
+  };
+
+  const handleKickClick = (id: string, name: string) => {
+    setPlayerToKick({ id, name });
+    setIsKickConfirmOpen(true);
+  };
+
+  const confirmKick = () => {
+    if (playerToKick) {
+      sendMessage("KICK_PLAYER", { target_user_id: playerToKick.id });
+      setIsKickConfirmOpen(false);
+      setPlayerToKick(null);
+    }
   };
 
   if (!isMounted || isLoading) {
@@ -183,7 +208,16 @@ export default function LobbyPage() {
                   key={player.user_id} 
                   className="bg-white/5 border-white/10 backdrop-blur-md overflow-hidden hover:border-indigo-500/50 transition-all duration-300 group hover:-translate-y-1 rounded-3xl"
                 >
-                  <CardContent className="p-6 flex flex-col items-center gap-3">
+                  <CardContent className="p-6 flex flex-col items-center gap-3 relative">
+                    {isHost && player.user_id !== user?.id && (
+                      <button
+                        onClick={() => handleKickClick(player.user_id, player.display_name)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                        title="Kick player"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                     <div className="relative">
                       <div className="w-16 h-16 rounded-3xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-indigo-500/20 group-hover:rotate-12 transition-transform duration-300">
                         {player.display_name.charAt(0).toUpperCase()}
@@ -260,6 +294,44 @@ export default function LobbyPage() {
           )}
         </div>
       </div>
+
+      {/* Kicked Modal */}
+      <Dialog open={isKicked} onOpenChange={() => handleLeave()}>
+        <DialogContent className="bg-[#020617] border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)] rounded-[2.5rem] p-8 md:p-12 text-center max-w-md">
+          <DialogHeader>
+            <div className="mx-auto w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mb-6 border border-red-500/20">
+              <X className="text-red-500" size={40} />
+            </div>
+            <DialogTitle className="text-3xl font-black italic uppercase text-white mb-2">
+              Bị mời khỏi phòng
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              {kickedMessage || "Bạn đã bị Host mời ra khỏi phòng chơi này."}
+            </p>
+          </div>
+          <DialogFooter className="mt-6 flex justify-center sm:justify-center">
+            <Button 
+              onClick={handleLeave}
+              className="h-16 px-12 rounded-2xl bg-white text-black font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+            >
+              Quay về trang chủ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Kick Confirmation */}
+      <ConfirmDialog
+        isOpen={isKickConfirmOpen}
+        onOpenChange={setIsKickConfirmOpen}
+        title="Kick Người Chơi"
+        description={`Bạn có chắc chắn muốn mời ${playerToKick?.name} ra khỏi phòng không?`}
+        onConfirm={confirmKick}
+        confirmText="Xác nhận Kick"
+        variant="destructive"
+      />
     </div>
   );
 }

@@ -138,4 +138,63 @@ class RoomService:
         # Game sẽ kết thúc khi hết câu hỏi hoặc Host chủ động đóng phòng.
         return await self._build_room_state_payload(db, redis, room)
 
+    async def kick_player(
+        self,
+        db: AsyncSession,
+        redis: Redis,
+        room_code: str,
+        host_id: uuid.UUID,
+        target_user_id: uuid.UUID
+    ) -> bool:
+        """
+        Logic kick người chơi:
+        1. Kiểm tra quyền Host.
+        2. Thêm vào danh sách bị ban trong Redis (Set: game:banned:{room_code}).
+        3. Phát tán event KICKED qua Pub/Sub.
+        4. Phát tán event PLAYER_LEFT (từ ROOM_STATE) cho những người còn lại.
+        """
+        room_code_upper = room_code.upper()
+        state_key = f"game:state:{room_code_upper}"
+        
+        actual_host_id = await redis.hget(state_key, "host_id")
+        if not actual_host_id or uuid.UUID(actual_host_id) != host_id:
+            return False
+
+        # 1. Thêm vào danh sách ban (Set tồn tại trong 2 giờ)
+        banned_key = f"game:banned:{room_code_upper}"
+        await redis.sadd(banned_key, str(target_user_id))
+        await redis.expire(banned_key, 7200)
+
+        # 2. Xóa khỏi danh sách active
+        active_key = f"game:active:{room_code_upper}"
+        await redis.srem(active_key, str(target_user_id))
+
+        # 3. Thông báo KICKED cho target player (để họ biết bị kick)
+        # Đồng thời thông báo cho cả phòng biết
+        from app.infrastructure.redis_client import publish_room_event
+        await publish_room_event(room_code_upper, {
+            "type": "KICKED",
+            "payload": {
+                "target_user_id": str(target_user_id),
+                "message": "Bạn đã bị Host mời ra khỏi phòng."
+            }
+        })
+
+        # 4. Gửi ROOM_STATE mới cập nhật cho cả phòng
+        room = await db.scalar(
+            select(GameSession).where(GameSession.room_code == room_code_upper)
+        )
+        if room:
+            new_state = await self._build_room_state_payload(db, redis, room)
+            # Chuyển type thành PLAYER_LEFT để UI cập nhật (hoặc dùng nguyên ROOM_STATE)
+            new_state["type"] = "PLAYER_LEFT"
+            await publish_room_event(room_code_upper, new_state)
+
+        return True
+
+    async def is_player_banned(self, redis: Redis, room_code: str, user_id: uuid.UUID) -> bool:
+        """Kiểm tra người chơi có nằm trong danh sách bị ban của phòng không."""
+        banned_key = f"game:banned:{room_code.upper()}"
+        return await redis.sismember(banned_key, str(user_id))
+
 room_service = RoomService()
