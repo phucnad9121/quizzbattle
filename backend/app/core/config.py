@@ -36,4 +36,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     allowed_origins: str = "http://localhost:3000"
 
+    # AI (Google Gemini - Free Tier)
+    google_api_key: str | None = None
+
 settings = Settings()

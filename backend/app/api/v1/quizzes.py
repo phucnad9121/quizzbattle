@@ -11,6 +11,11 @@ from app.schemas.quiz import QuizCreate, QuizUpdate, QuizResponse, QuizListRespo
 from app.schemas.question import QuestionCreate, QuestionResponse, ReorderQuestionsRequest
 from app.repositories.quiz_repo import QuizRepository, QuestionRepository
 from app.db.models.user import User
+from app.db.models.ai import AIUsageLog
+from app.schemas.ai import AIGenerationRequest, AIGenerationResponse
+from app.services.ai_service import ai_service
+from sqlalchemy import select, func
+from datetime import date
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
@@ -176,7 +181,36 @@ async def create_question(
     
     # Refresh to ensure relationships are loaded (though create already refreshes options)
     # The response_model needs options, which question_repo.create already eagerly loads.
+    # The response_model needs options, which question_repo.create already eagerly loads.
     return question
+
+@router.post("/{id}/questions/bulk", response_model=list[QuestionResponse], status_code=status.HTTP_201_CREATED)
+async def create_questions_bulk(
+    id: uuid.UUID,
+    data: list[QuestionCreate],
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    quiz_repo = QuizRepository(session)
+    quiz = await quiz_repo.get_by_id(id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+        
+    if quiz.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    question_repo = QuestionRepository(session)
+    created_questions = []
+    
+    current_count = len(quiz.questions)
+    for idx, q_data in enumerate(data):
+        d_dict = q_data.model_dump()
+        d_dict["order_index"] = current_count + idx
+        question = await question_repo.create(quiz_id=id, data=d_dict)
+        created_questions.append(question)
+        
+    await session.commit()
+    return created_questions
 
 @router.put("/{id}/questions/reorder", response_model=QuizDetailResponse)
 async def reorder_questions(
@@ -376,3 +410,59 @@ async def import_quiz_from_word(
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Error processing Word file: {str(e)}")
+
+@router.post("/{id}/ai-generate", response_model=AIGenerationResponse, summary="Tạo câu hỏi bằng AI")
+async def generate_ai_questions(
+    id: uuid.UUID,
+    data: AIGenerationRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Sử dụng Claude API để tự động tạo câu hỏi dựa trên chủ đề.
+    Giới hạn 10 lần/ngày mỗi người dùng.
+    """
+    # 1. Kiểm tra quyền sở hữu Quiz
+    repo = QuizRepository(session)
+    quiz = await repo.get_by_id(id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz không tồn tại")
+    if quiz.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền chỉnh sửa bộ câu hỏi này")
+
+    # 2. Kiểm tra Rate Limit (10 requests/ngày)
+    today = date.today()
+    usage_count = await session.scalar(
+        select(func.count(AIUsageLog.id)).where(
+            AIUsageLog.user_id == current_user.id,
+            func.date(AIUsageLog.created_at) == today
+        )
+    )
+    if usage_count >= 10:
+        raise HTTPException(
+            status_code=429, 
+            detail="Bạn đã hết lượt tạo câu hỏi bằng AI trong hôm nay (tối đa 10 lượt/ngày)."
+        )
+
+    # 3. Gọi AI Service
+    try:
+        result = await ai_service.generate_questions(data)
+        
+        # 4. Lưu log sử dụng
+        usage_log = AIUsageLog(
+            user_id=current_user.id,
+            action="generate_questions",
+            topic=data.topic,
+            num_questions=data.num_questions,
+            model=result["usage"]["model"],
+            prompt_tokens=result["usage"]["prompt_tokens"],
+            completion_tokens=result["usage"]["completion_tokens"],
+            total_tokens=result["usage"]["total_tokens"]
+        )
+        session.add(usage_log)
+        await session.commit()
+        
+        return result
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -8,9 +8,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Loader2, Plus, GripVertical, Settings, Pencil, Trash2, ArrowLeft, HelpCircle } from "lucide-react";
+import { Loader2, Plus, GripVertical, Settings, Pencil, Trash2, ArrowLeft, HelpCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { QuestionForm } from "@/components/quiz/QuestionForm";
+import { AIGeneratorModal } from "@/components/quiz/AIGeneratorModal";
 import { AxiosError } from "axios";
 
 // DND Kit
@@ -117,6 +118,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingQuestion, setDeletingQuestion] = useState<QuestionResponse | null>(null);
+
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // Sync questions from server
   useEffect(() => {
@@ -226,6 +229,13 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           </div>
           
           <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsAIModalOpen(true)}
+              className="h-14 px-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400 font-black uppercase tracking-widest text-[10px] gap-3 transition-all group"
+            >
+              <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" /> Tạo câu hỏi AI
+            </Button>
             <Link href={`/quiz/${quizId}/edit`}>
               <Button variant="ghost" className="h-14 px-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase tracking-widest text-[10px] gap-3 transition-all">
                 <Settings className="w-4 h-4" /> Cài đặt
@@ -301,6 +311,12 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         onConfirm={handleDeleteConfirm}
         isLoading={isDeleting}
         confirmText="Xóa ngay"
+      />
+
+      <AIGeneratorModal 
+        quizId={quizId}
+        isOpen={isAIModalOpen}
+        onOpenChange={setIsAIModalOpen}
       />
     </div>
   );

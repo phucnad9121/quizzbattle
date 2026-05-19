@@ -66,3 +66,16 @@ export const useReorderQuestions = (quizId: string) => {
     },
   });
 };
+
+export const useBulkCreateQuestions = (quizId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateQuestionData[]) => {
+      const res = await apiClient.post<QuestionResponse[]>(`/quizzes/${quizId}/questions/bulk`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quiz", quizId] });
+    },
+  });
+};
